@@ -7,7 +7,7 @@ enum PlaylistModalType { add, remove }
 class PlaylistsModal {
   static Future<void> show(BuildContext currentContext, String trackId) async {
     Future<Map<String, dynamic>?> load() async {
-      var response = await ApiService.getUserPlaylists(false);
+      var response = await ApiService.getUserPlaylists(false, false);
       if (!currentContext.mounted) return null;
       if (response != null && response["error"] != null) {
         ApiService.returnError(currentContext, response["error"]);

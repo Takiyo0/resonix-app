@@ -3,6 +3,7 @@ import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:resonix/main.dart';
 import 'package:resonix/modals/track_modal.dart';
 import 'package:resonix/pages/album.dart';
+import 'package:resonix/pages/playlist.dart';
 import 'package:resonix/services/api_service.dart';
 import 'package:resonix/widgets/custom_image.dart';
 
@@ -71,6 +72,10 @@ class HomeStatefulPage extends State<HomePage> {
       if (type == "album") {
         Navigator.of(context).push(
           CupertinoPageRoute(builder: (ctx) => AlbumPage(id: data["id"])),
+        );
+      } else if (type == "playlist") {
+        Navigator.of(context).push(
+          CupertinoPageRoute(builder: (ctx) => PlaylistPage(id: data["id"])),
         );
       }
       if (type != "track") return;
@@ -178,7 +183,20 @@ Widget _buildList(List<dynamic> data, String type, dynamic nowPlaying,
                                 ? null
                                 : () => onTap(item),
                         onLongPress: () {
-                          if (type == "track") TrackModal.show(context, item, audioState, false);
+                          if (type == "track") {
+                            TrackModal.show(
+                                context,
+                                [
+                                  TrackModalAction.favorite,
+                                  TrackModalAction.queue,
+                                  TrackModalAction.playlistAdd,
+                                  TrackModalAction.album,
+                                  TrackModalAction.artist
+                                ],
+                                item,
+                                audioState,
+                                null, null);
+                          }
                         },
                         borderRadius: BorderRadius.circular(12.0),
                         splashColor: Colors.white.withOpacity(0.2),
@@ -198,7 +216,11 @@ Widget _buildList(List<dynamic> data, String type, dynamic nowPlaying,
                                   ),
                                   child: Stack(
                                     children: [
-                                      CustomImage(imageUrl: '${ApiService.baseUrl}/storage/cover/$type/${item["id"]}', height: 150, width: 150),
+                                      CustomImage(
+                                          imageUrl:
+                                              '${ApiService.baseUrl}/storage/cover/$type/${item["id"]}',
+                                          height: 150,
+                                          width: 150),
                                       Visibility(
                                           visible: nowPlaying != null &&
                                               (nowPlaying?.extras?["albumId"] ==
@@ -235,6 +257,7 @@ Widget _buildList(List<dynamic> data, String type, dynamic nowPlaying,
                                   item["artists"]
                                           ?.map((artist) => artist.toString())
                                           .join(", ") ??
+                                      item["ownername"] ??
                                       "Unknown",
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,

@@ -1,7 +1,10 @@
 import 'dart:ui';
 
+import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
 import 'package:resonix/modals/new_playlist_modal.dart';
+import 'package:resonix/pages/album.dart';
+import 'package:resonix/pages/playlist.dart';
 import 'package:resonix/screens/login.dart';
 import 'package:resonix/services/api_service.dart';
 import 'package:resonix/widgets/custom_image.dart';
@@ -17,9 +20,10 @@ class LibraryPage extends StatefulWidget {
 
 class LibraryPageState extends State<LibraryPage> {
   dynamic playlists;
+  dynamic albums;
 
-  Future<void> loadPlaylists() async {
-    var response = await ApiService.getUserPlaylists(true);
+  Future<void> loadLibrary() async {
+    var response = await ApiService.getUserLibrary();
     if (!mounted) return;
     if (response != null) {
       if (response["error"] != null) {
@@ -27,6 +31,7 @@ class LibraryPageState extends State<LibraryPage> {
       }
       setState(() {
         playlists = response["playlists"];
+        albums = response["albums"];
       });
     } else {
       await ApiService.returnTokenExpired(context);
@@ -36,7 +41,7 @@ class LibraryPageState extends State<LibraryPage> {
   @override
   void initState() {
     super.initState();
-    loadPlaylists();
+    loadLibrary();
   }
 
   @override
@@ -74,7 +79,7 @@ class LibraryPageState extends State<LibraryPage> {
           IconButton(
             icon: const Icon(Icons.add, color: Colors.white),
             onPressed: () {
-              NewPlaylistModal.show(context, (str) => loadPlaylists());
+              NewPlaylistModal.show(context, (str) => loadLibrary());
             },
           ),
         ],
@@ -102,17 +107,13 @@ class LibraryPageState extends State<LibraryPage> {
               playlists == null
                   ? ListView.builder(
                       shrinkWrap: true,
-                      // Allow ListView to fit content
                       physics: NeverScrollableScrollPhysics(),
-                      // Disable inner scrolling
                       itemCount: 4,
                       itemBuilder: (context, index) => SkeletonTrack(),
                     )
                   : ListView.separated(
                       shrinkWrap: true,
-                      // Allow ListView to fit content
                       physics: NeverScrollableScrollPhysics(),
-                      // Disable inner scrolling
                       itemCount: playlists.length,
                       itemBuilder: (context, index) {
                         var playlist = playlists[index];
@@ -122,7 +123,13 @@ class LibraryPageState extends State<LibraryPage> {
                             borderRadius: BorderRadius.circular(12.0),
                           ),
                           child: InkWell(
-                            onTap: () {},
+                            onTap: () {
+                              Navigator.of(context).push(
+                                CupertinoPageRoute(
+                                    builder: (ctx) =>
+                                        PlaylistPage(id: playlist["id"])),
+                              );
+                            },
                             borderRadius: BorderRadius.circular(12.0),
                             splashColor: Colors.white.withAlpha(50),
                             highlightColor: Colors.white.withAlpha(30),
@@ -150,6 +157,76 @@ class LibraryPageState extends State<LibraryPage> {
                                       ),
                                       Text(
                                         playlist["description"] ??
+                                            "No description",
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ),
+                        );
+                      },
+                      separatorBuilder: (context, index) =>
+                          const SizedBox(height: 10),
+                    ),
+              albums == null
+                  ? ListView.builder(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: 4,
+                      itemBuilder: (context, index) => SkeletonTrack(),
+                    )
+                  : ListView.separated(
+                      shrinkWrap: true,
+                      physics: NeverScrollableScrollPhysics(),
+                      itemCount: albums.length,
+                      itemBuilder: (context, index) {
+                        var album = albums[index];
+                        return Ink(
+                          decoration: BoxDecoration(
+                            color: Color(0xFF28123E),
+                            borderRadius: BorderRadius.circular(12.0),
+                          ),
+                          child: InkWell(
+                            onTap: () {
+                              Navigator.of(context).push(
+                                CupertinoPageRoute(
+                                    builder: (ctx) =>
+                                        AlbumPage(id: album["id"])),
+                              );
+                            },
+                            borderRadius: BorderRadius.circular(12.0),
+                            splashColor: Colors.white.withAlpha(50),
+                            highlightColor: Colors.white.withAlpha(30),
+                            child: Padding(
+                              padding: const EdgeInsets.all(10),
+                              child: Row(
+                                children: [
+                                  CustomImage(
+                                      imageUrl:
+                                          '${ApiService.baseUrl}/storage/cover/album/${album["id"]}',
+                                      height: 70,
+                                      width: 70),
+                                  const SizedBox(width: 10),
+                                  Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        album["name"] ?? "No name",
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      Text(
+                                        album["description"] ??
                                             "No description",
                                         style: const TextStyle(
                                           color: Colors.white,
