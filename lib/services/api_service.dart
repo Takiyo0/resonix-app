@@ -4,8 +4,7 @@ import 'package:resonix/screens/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static final baseUrl = 'http://192.168.1.3:6269';
-  static final _dio = Dio(BaseOptions(baseUrl: baseUrl));
+  static final baseUrl = 'http://192.168.1.5:6269';
   static final _dio = Dio(BaseOptions(baseUrl: baseUrl, headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
