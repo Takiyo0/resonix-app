@@ -1,11 +1,13 @@
+import 'package:flutter/cupertino.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:resonix/main.dart';
+import 'package:resonix/modals/track_modal.dart';
+import 'package:resonix/pages/album.dart';
 import 'package:resonix/services/api_service.dart';
+import 'package:resonix/widgets/custom_image.dart';
 
 class HomePage extends StatefulWidget {
-  final Function(int, String, {dynamic data}) onNavigate;
-
-  const HomePage({super.key, required this.onNavigate});
+  const HomePage({super.key});
 
   @override
   State<HomePage> createState() => HomeStatefulPage();
@@ -65,20 +67,11 @@ class HomeStatefulPage extends State<HomePage> {
       }
     });
 
-    Future<void> onTap(dynamic data, String type) async {
+    Future onTap(dynamic data, String type) async {
       if (type == "album") {
-        var tracks = await ApiService.getAlbumTracks(data["id"]);
-        if (!mounted) return;
-        if (tracks == null || tracks.containsKey("error")) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(
-              content: Text("Error fetching album tracks"),
-              backgroundColor: Colors.red,
-            ),
-          );
-          return;
-        }
-        widget.onNavigate(3, "album", data: {"album": data, "tracks": tracks});
+        Navigator.of(context).push(
+          CupertinoPageRoute(builder: (ctx) => AlbumPage(id: data["id"])),
+        );
       }
       if (type != "track") return;
       try {
@@ -133,7 +126,7 @@ class HomeStatefulPage extends State<HomePage> {
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
                         _buildList(_trackData, "track", nowPlaying,
-                            (item) => onTap(item, "track")),
+                            (item) => onTap(item, "track"), audioState),
                         const SizedBox(height: 20),
                         const Text("Albums",
                             style: TextStyle(
@@ -141,7 +134,7 @@ class HomeStatefulPage extends State<HomePage> {
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
                         _buildList(_albumData, "album", nowPlaying,
-                            (item) => onTap(item, "album")),
+                            (item) => onTap(item, "album"), audioState),
                         const SizedBox(height: 20),
                         const Text("Playlists",
                             style: TextStyle(
@@ -149,7 +142,7 @@ class HomeStatefulPage extends State<HomePage> {
                                 fontWeight: FontWeight.bold,
                                 color: Colors.white)),
                         _buildList(_playlistData, "playlist", nowPlaying,
-                            (item) => onTap(item, "playlist")),
+                            (item) => onTap(item, "playlist"), audioState),
                       ],
                     ),
         ));
@@ -157,7 +150,7 @@ class HomeStatefulPage extends State<HomePage> {
 }
 
 Widget _buildList(List<dynamic> data, String type, dynamic nowPlaying,
-    ValueChanged<dynamic> onTap) {
+    ValueChanged<dynamic> onTap, AudioState audioState) {
   return SizedBox(
     height: 210,
     child: data.isEmpty
@@ -184,6 +177,9 @@ Widget _buildList(List<dynamic> data, String type, dynamic nowPlaying,
                             nowPlaying != null && nowPlaying?.id == item["id"]
                                 ? null
                                 : () => onTap(item),
+                        onLongPress: () {
+                          if (type == "track") TrackModal.show(context, item, audioState, false);
+                        },
                         borderRadius: BorderRadius.circular(12.0),
                         splashColor: Colors.white.withOpacity(0.2),
                         highlightColor: Colors.white.withOpacity(0.1),
@@ -202,22 +198,7 @@ Widget _buildList(List<dynamic> data, String type, dynamic nowPlaying,
                                   ),
                                   child: Stack(
                                     children: [
-                                      ClipRRect(
-                                        borderRadius:
-                                            BorderRadius.circular(8.0),
-                                        child: Image.network(
-                                          '${ApiService.baseUrl}/storage/cover/$type/${item["id"]}',
-                                          fit: BoxFit.cover,
-                                          errorBuilder:
-                                              (context, error, stackTrace) {
-                                            return const Center(
-                                              child: Icon(Icons.music_note,
-                                                  color: Colors.white,
-                                                  size: 40),
-                                            );
-                                          },
-                                        ),
-                                      ),
+                                      CustomImage(imageUrl: '${ApiService.baseUrl}/storage/cover/$type/${item["id"]}', height: 150, width: 150),
                                       Visibility(
                                           visible: nowPlaying != null &&
                                               (nowPlaying?.extras?["albumId"] ==
