@@ -3,12 +3,11 @@ import 'dart:ui';
 
 import 'package:flutter/cupertino.dart';
 import 'package:resonix/main.dart';
+import 'package:resonix/pages/album.dart';
 import 'package:resonix/services/api_service.dart';
 
 class SearchPage extends StatelessWidget {
-  final Function(int, String, {dynamic data}) onNavigate;
-
-  const SearchPage({super.key, required this.onNavigate});
+  const SearchPage({super.key});
 
   @override
   Widget build(BuildContext context) {
@@ -34,15 +33,13 @@ class SearchPage extends StatelessWidget {
           fontSize: 24,
         ),
       ),
-      body: SearchStatefulPage(onNavigate: onNavigate),
+      body: SearchStatefulPage(),
     );
   }
 }
 
 class SearchStatefulPage extends StatefulWidget {
-  final Function(int, String, {dynamic data}) onNavigate;
-
-  const SearchStatefulPage({super.key, required this.onNavigate});
+  const SearchStatefulPage({super.key});
 
   @override
   SearchPageState createState() => SearchPageState();
@@ -105,33 +102,16 @@ class SearchPageState extends State<SearchStatefulPage> {
 
     Future<void> onTap(dynamic data, String type) async {
       FocusScope.of(context).unfocus();
-      if (type == "album") widget.onNavigate(3, "album", data: data);
+      if (type == "album") {
+        Navigator.of(context).push(
+          CupertinoPageRoute(builder: (ctx) => AlbumPage(id: data["id"])),
+        );
+      }
       if (type != "track") return;
       try {
-        try {
-          var tag = MediaItem(
-            id: data["id"],
-            album: data['albumname'] ?? 'Unknown Album',
-            artist: data['artists']
-                    ?.map((artist) => artist.toString())
-                    .join(", ") ??
-                'Unknown Artist',
-            title: data['name'] ?? 'Unknown Title',
-            extras: {
-              "albumId": data["albumid"],
-            },
-            artUri: Uri.parse(
-                '${ApiService.baseUrl}/storage/cover/track/${data["id"]}'),
-          );
-          await audioState.player.setAudioSource(
-            AudioSource.uri(
-              Uri.parse('${ApiService.baseUrl}/storage/track/${data["id"]}'),
-              tag: tag,
-            ),
-          );
-          audioState.player.play();
-        } catch (e, stack) { }
-      } catch (e) { }
+        await audioState.play(
+            audioState.buildTrack(data, "Search on $_searchQuery"), true);
+      } catch (e) {}
     }
 
     return GestureDetector(
