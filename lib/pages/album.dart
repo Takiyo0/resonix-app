@@ -23,12 +23,13 @@ class AlbumPage extends StatefulWidget {
 
 class AlbumPageState extends State<AlbumPage> {
   Color? lightColor;
-  double _scale = 1.0;
-  double _barProgress = 0.0;
   double _modalProgress = 0.0;
   dynamic nowPlaying;
   dynamic data;
   dynamic tracks;
+
+  final ValueNotifier<double> _scaleNotifier = ValueNotifier(1.0);
+  final ValueNotifier<double> _barProgressNotifier = ValueNotifier(0.0);
 
   @override
   void initState() {
@@ -119,14 +120,13 @@ class AlbumPageState extends State<AlbumPage> {
   }
 
   void _onScroll(ScrollNotification notification) {
-    if (notification.metrics.pixels > 0) {
-      setState(() {
-        _scale = 1.0 + (notification.metrics.pixels / 900);
-      });
+    if (notification.metrics.pixels > 0 && notification.metrics.pixels < 350) {
+      if (mounted) {
+        _scaleNotifier.value = 1.0 + (notification.metrics.pixels / 900);
+      }
     }
-    setState(() {
-      _barProgress = (notification.metrics.pixels.clamp(230, 310) - 230) / 50;
-    });
+    _barProgressNotifier.value =
+        (notification.metrics.pixels.clamp(230, 310) - 230) / 50;
   }
 
   @override
@@ -237,10 +237,16 @@ class AlbumPageState extends State<AlbumPage> {
                                   child: Column(
                                     children: [
                                       Center(
-                                        child: GrowingImageOnScroll(
-                                          imageUrl:
-                                              '${ApiService.baseUrl}/storage/cover/album/${data?["id"]}',
-                                          scale: _scale,
+                                        child: AnimatedBuilder(
+                                          animation: Listenable.merge(
+                                              [_scaleNotifier]),
+                                          builder: (context, child) {
+                                            return GrowingImageOnScroll(
+                                              imageUrl:
+                                                  '${ApiService.baseUrl}/storage/cover/album/${data?["id"]}',
+                                              scale: _scaleNotifier.value,
+                                            );
+                                          },
                                         ),
                                       ),
                                       const SizedBox(height: 8),
@@ -426,7 +432,20 @@ class AlbumPageState extends State<AlbumPage> {
                                                         onTap(track, "track"),
                                                     onLongPress: () {
                                                       TrackModal.show(
-                                                          context, track, audioState, true);
+                                                          context,
+                                                          [
+                                                            TrackModalAction
+                                                                .favorite,
+                                                            TrackModalAction
+                                                                .queue,
+                                                            TrackModalAction
+                                                                .playlistAdd,
+                                                            TrackModalAction
+                                                                .artist
+                                                          ],
+                                                          track,
+                                                          audioState,
+                                                          null, null);
                                                     },
                                                     borderRadius:
                                                         BorderRadius.circular(
@@ -567,81 +586,98 @@ class AlbumPageState extends State<AlbumPage> {
                       ),
                     ),
                     Positioned(
-                      child: Stack(
-                        children: [
-                          AnimatedContainer(
-                            width: MediaQuery.of(context).size.width,
-                            duration: const Duration(milliseconds: 150),
-                            decoration: BoxDecoration(
-                              color: (lightColor != null
-                                      ? _darkenColor(lightColor!, 0.5)
-                                      : Colors.black)
-                                  .withAlpha((255 * (_barProgress))
-                                      .clamp(0, 255)
-                                      .toInt()),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(
-                                      (_barProgress * 255 * 0.2).toInt()),
-                                  blurRadius: 10,
-                                  spreadRadius: 2,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
-                            ),
-                            child: Padding(
-                              padding:
-                                  const EdgeInsets.only(bottom: 10, left: 10),
-                              child: SafeArea(
-                                bottom: false,
-                                child: Row(
-                                  children: [
-                                    IconButton(
-                                      onPressed: () => Navigator.pop(context),
-                                      icon: Icon(Icons.arrow_back_ios,
-                                          color: Colors.white, size: 20),
-                                    ),
-                                    SizedBox(width: 8),
-                                    Flexible(
-                                      child: AnimatedBuilder(
-                                        animation: Listenable.merge([]),
-                                        builder: (context, child) {
-                                          return Transform.translate(
-                                            offset: Offset(
-                                                0,
-                                                20 *
-                                                    (1 -
-                                                        clampDouble(
-                                                            _barProgress,
-                                                            0.0,
-                                                            1.0))),
-                                            child: Opacity(
-                                              opacity: clampDouble(
-                                                  _barProgress, 0.0, 1.0),
-                                              child: child,
-                                            ),
-                                          );
-                                        },
-                                        child: data == null
-                                            ? SkeletonText(
-                                                width: 150, height: 20)
-                                            : Text(
-                                                data["name"] ?? "Album",
-                                                style: TextStyle(
-                                                  color: Colors.white,
-                                                  fontSize: 20,
-                                                  fontWeight: FontWeight.bold,
-                                                ),
-                                                overflow: TextOverflow.ellipsis,
-                                              ),
-                                      ),
+                      child: AnimatedBuilder(
+                        animation: Listenable.merge(
+                            [_barProgressNotifier, _scaleNotifier]),
+                        builder: (context, child) {
+                          return Stack(
+                            children: [
+                              AnimatedContainer(
+                                width: MediaQuery.of(context).size.width,
+                                duration: const Duration(milliseconds: 150),
+                                decoration: BoxDecoration(
+                                  color: (lightColor != null
+                                          ? _darkenColor(lightColor!, 0.5)
+                                          : Colors.black)
+                                      .withAlpha(
+                                          (255 * _barProgressNotifier.value)
+                                              .clamp(0, 255)
+                                              .toInt()),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withAlpha(
+                                          (_barProgressNotifier.value *
+                                                  255 *
+                                                  0.2)
+                                              .toInt()),
+                                      blurRadius: 10,
+                                      spreadRadius: 2,
+                                      offset: const Offset(0, 4),
                                     ),
                                   ],
                                 ),
+                                child: Padding(
+                                  padding: const EdgeInsets.only(
+                                      bottom: 10, left: 10),
+                                  child: SafeArea(
+                                    bottom: false,
+                                    child: Row(
+                                      children: [
+                                        IconButton(
+                                          onPressed: () =>
+                                              Navigator.pop(context),
+                                          icon: Icon(Icons.arrow_back_ios,
+                                              color: Colors.white, size: 20),
+                                        ),
+                                        SizedBox(width: 8),
+                                        Flexible(
+                                          child: AnimatedBuilder(
+                                            animation: Listenable.merge([]),
+                                            builder: (context, child) {
+                                              return Transform.translate(
+                                                offset: Offset(
+                                                    0,
+                                                    20 *
+                                                        (1 -
+                                                            clampDouble(
+                                                                _barProgressNotifier
+                                                                    .value,
+                                                                0.0,
+                                                                1.0))),
+                                                child: Opacity(
+                                                  opacity: clampDouble(
+                                                      _barProgressNotifier
+                                                          .value,
+                                                      0.0,
+                                                      1.0),
+                                                  child: child,
+                                                ),
+                                              );
+                                            },
+                                            child: data == null
+                                                ? SkeletonText(
+                                                    width: 150, height: 20)
+                                                : Text(
+                                                    data["name"] ?? "Album",
+                                                    style: TextStyle(
+                                                      color: Colors.white,
+                                                      fontSize: 20,
+                                                      fontWeight:
+                                                          FontWeight.bold,
+                                                    ),
+                                                    overflow:
+                                                        TextOverflow.ellipsis,
+                                                  ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
                               ),
-                            ),
-                          ),
-                        ],
+                            ],
+                          );
+                        },
                       ),
                     ),
                   ],

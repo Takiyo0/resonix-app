@@ -34,8 +34,8 @@ class HomeState extends State<Home> {
       _navigatorKey.currentState?.pushReplacement(
         PageRouteBuilder(
           pageBuilder: (context, animation, secondaryAnimation) => _getPageByName(newIndex),
-          transitionDuration: Duration.zero, // No animation
-          reverseTransitionDuration: Duration.zero, // No reverse animation
+          transitionDuration: Duration.zero,
+          reverseTransitionDuration: Duration.zero,
         ),
       );
     });
