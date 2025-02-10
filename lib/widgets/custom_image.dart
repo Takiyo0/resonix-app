@@ -1,3 +1,4 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -41,16 +42,16 @@ class _CustomImageState extends State<CustomImage> {
         borderRadius: BorderRadius.circular(12),
         child: AnimatedSwitcher(
           duration: const Duration(milliseconds: 500),
-          child: Image.network(
-            widget.imageUrl,
+          child: CachedNetworkImage(
             fit: BoxFit.cover,
-            frameBuilder: (context, child, frame, sync) {
-              if (frame == null) {
+            imageUrl: widget.imageUrl,
+            progressIndicatorBuilder: (context, url, downloadProgress) {
+              if (downloadProgress.progress == null) {
                 return _buildSkeleton();
               }
-              return child;
+              return Container();
             },
-            errorBuilder: (context, error, stackTrace) {
+            errorWidget: (context, url, error) {
               return widget.fallback ??
                   Container(
                     color: Colors.black.withAlpha((255 * 0.5).toInt()),
@@ -58,7 +59,6 @@ class _CustomImageState extends State<CustomImage> {
                       child: Icon(
                         Icons.music_note,
                         color: Colors.white,
-                        // size: 60,
                         size: widget.height * 0.6,
                       ),
                     ),

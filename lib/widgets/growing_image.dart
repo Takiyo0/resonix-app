@@ -1,4 +1,6 @@
+import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/material.dart';
+import 'package:shimmer/shimmer.dart';
 
 class GrowingImageOnScroll extends StatefulWidget {
   final String imageUrl;
@@ -17,7 +19,9 @@ class _GrowingImageOnScrollState extends State<GrowingImageOnScroll> {
     return Column(
       children: [
         Container(
-          width: (MediaQuery.of(context).size.width * 0.65 * widget.scale).toDouble().clamp(220.0, 500.0),
+          width: (MediaQuery.of(context).size.width * 0.65 * widget.scale)
+              .toDouble()
+              .clamp(220.0, 500.0),
           height: MediaQuery.of(context).size.width * 0.65,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
@@ -32,17 +36,23 @@ class _GrowingImageOnScrollState extends State<GrowingImageOnScroll> {
           ),
           child: ClipRRect(
             borderRadius: BorderRadius.circular(12),
-            child: Image.network(
-              widget.imageUrl,
+            child: CachedNetworkImage(
               fit: BoxFit.cover,
-              errorBuilder: (context, error, stackTrace) {
+              imageUrl: widget.imageUrl,
+              progressIndicatorBuilder: (context, url, downloadProgress) {
+                if (downloadProgress.progress == null) {
+                  return _buildSkeleton();
+                }
+                return Container();
+              },
+              errorWidget: (context, url, error) {
                 return Container(
-                  color: Colors.black.withOpacity(0.5),
-                  child: const Center(
+                  color: Colors.black.withAlpha((255 * 0.5).toInt()),
+                  child: Center(
                     child: Icon(
                       Icons.music_note,
                       color: Colors.white,
-                      size: 60,
+                      size: 50,
                     ),
                   ),
                 );
@@ -51,6 +61,20 @@ class _GrowingImageOnScrollState extends State<GrowingImageOnScroll> {
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSkeleton() {
+    return Shimmer.fromColors(
+      baseColor: Colors.grey[800]!,
+      highlightColor: Colors.grey[600]!,
+      child: Container(
+        width: (MediaQuery.of(context).size.width * 0.65 * widget.scale)
+            .toDouble()
+            .clamp(220.0, 500.0),
+        height: MediaQuery.of(context).size.width * 0.65,
+        color: Colors.black,
+      ),
     );
   }
 }
