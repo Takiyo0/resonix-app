@@ -5,10 +5,8 @@ import 'package:google_nav_bar/google_nav_bar.dart';
 import 'package:resonix/main.dart';
 import 'package:resonix/pages/home.dart';
 import 'package:resonix/pages/library.dart';
-import 'package:resonix/pages/album.dart';
 import 'package:resonix/pages/nowPlaying.dart';
 import 'package:resonix/pages/search.dart';
-import 'package:resonix/services/api_service.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -25,16 +23,35 @@ class HomeState extends State<Home> {
   int _prevIndex = 0;
   double progress = 0.0;
   ProcessingState currentProcessingState = ProcessingState.idle;
-  dynamic _albumData;
   final DraggableScrollableController _sheetController =
       DraggableScrollableController();
+  final GlobalKey<NavigatorState> _navigatorKey = GlobalKey<NavigatorState>();
 
   void navigateToPage(int newIndex, String type, {dynamic data}) {
     setState(() {
       _prevIndex = _index;
       _index = newIndex;
-      if (type == "album") _albumData = data;
+      _navigatorKey.currentState?.pushReplacement(
+        PageRouteBuilder(
+          pageBuilder: (context, animation, secondaryAnimation) => _getPageByName(newIndex),
+          transitionDuration: Duration.zero, // No animation
+          reverseTransitionDuration: Duration.zero, // No reverse animation
+        ),
+      );
     });
+  }
+
+  Widget _getPageByName(int index) {
+    switch (index) {
+      case 0:
+        return const HomePage();
+      case 1:
+        return const SearchPage();
+      case 2:
+        return LibraryPage();
+      default:
+        return const HomePage();
+    }
   }
 
   void goBack() {
@@ -129,12 +146,26 @@ class HomeState extends State<Home> {
                   Expanded(
                     child: Stack(
                       children: [
-                        IndexedStack(index: _index, children: [
-                          HomePage(onNavigate: navigateToPage),
-                          SearchPage(onNavigate: navigateToPage),
-                          LibraryPage(),
-                          AlbumPage(data: _albumData, onBack: goBack),
-                        ]),
+                        Navigator(
+                          key: _navigatorKey,
+                          onGenerateRoute: (settings) {
+                            late Widget page;
+                            switch (settings.name) {
+                              case '/':
+                                page = HomePage();
+                                break;
+                              case '/search':
+                                page = SearchPage();
+                                break;
+                              case '/library':
+                                page = LibraryPage();
+                                break;
+                              default:
+                                page = HomePage();
+                            }
+                            return MaterialPageRoute(builder: (_) => page);
+                          },
+                        ),
                         Positioned(
                           bottom: 15,
                           left: 14,
@@ -352,18 +383,18 @@ class HomeState extends State<Home> {
           Positioned.fill(
             child: DraggableScrollableSheet(
               controller: _sheetController,
-              initialChildSize: 0.01,
-              minChildSize: 0.01,
+              initialChildSize: 0.0,
+              minChildSize: 0.0,
               maxChildSize: 1.0,
               snap: true,
               snapAnimationDuration: const Duration(milliseconds: 200),
-              snapSizes: [0.01, 1.0],
+              snapSizes: [0.0, 1.0],
               builder: (context, scrollController) {
                 return Container(
                   decoration: BoxDecoration(
                     color: Colors.black,
                     borderRadius:
-                        BorderRadius.vertical(top: Radius.circular(20)),
+                    BorderRadius.vertical(top: Radius.circular(20)),
                   ),
                   child: NowPlayingPage(scrollController: scrollController),
                 );
