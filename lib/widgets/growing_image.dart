@@ -17,8 +17,8 @@ class _GrowingImageOnScrollState extends State<GrowingImageOnScroll> {
     return Column(
       children: [
         Container(
-          width: (220 * widget.scale).toDouble().clamp(220.0, 500.0),
-          height: 220,
+          width: (MediaQuery.of(context).size.width * 0.65 * widget.scale).toDouble().clamp(220.0, 500.0),
+          height: MediaQuery.of(context).size.width * 0.65,
           decoration: BoxDecoration(
             borderRadius: BorderRadius.circular(12),
             boxShadow: [
