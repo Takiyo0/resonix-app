@@ -5,9 +5,23 @@ import 'package:resonix/services/api_service.dart';
 import 'package:resonix/state/audio_state.dart';
 import 'package:resonix/widgets/custom_image.dart';
 
+enum TrackModalAction {
+  favorite,
+  queue,
+  playlistAdd,
+  playlistRemove,
+  album,
+  artist,
+}
+
 class TrackModal {
-  static void show(BuildContext currentContext, Map<String, dynamic> track,
-      AudioState audioState, bool hideAlbum) {
+  static void show(
+      BuildContext currentContext,
+      List<TrackModalAction> actions,
+      Map<String, dynamic> track,
+      AudioState audioState,
+      Function? refresh,
+      String? playlistId) {
     Future<void> likeTrack(Function updateState) async {
       var response = await ApiService.likeTrack(track["id"]);
       if (!currentContext.mounted) return;
@@ -18,6 +32,21 @@ class TrackModal {
         updateState(() {
           track["liked"] = response["liked"];
         });
+      } else {
+        await ApiService.returnTokenExpired(currentContext);
+      }
+    }
+
+    Future<void> removeTrackFromPlaylist(BuildContext context) async {
+      if (playlistId == null) return;
+      var response =
+          await ApiService.removeTrackFromPlaylist(playlistId, track["id"]);
+      if (!currentContext.mounted) return;
+      if (context.mounted) Navigator.pop(context);
+      if (response != null) {
+        if (response["error"] != null) {
+          return ApiService.returnError(currentContext, response["error"]);
+        }
       } else {
         await ApiService.returnTokenExpired(currentContext);
       }
@@ -105,49 +134,67 @@ class TrackModal {
                   const SizedBox(height: 15),
                   Column(
                     children: [
-                      _buildOptionTile(
-                        icon: track["liked"] == true
-                            ? Icons.favorite
-                            : Icons.favorite_border,
-                        iconColor: const Color(0xFFFF77A8),
-                        title: "Favorite",
-                        onTap: () => likeTrack(setState),
-                      ),
-                      _buildOptionTile(
-                        icon: Icons.queue_music,
-                        title: "Add to queue",
-                        onTap: () => audioState.addTracks(
-                            [audioState.buildTrack(track, "Recommendation")]),
-                      ),
-                      _buildOptionTile(
-                        icon: Icons.playlist_add,
-                        title: "Add to Playlist",
-                        onTap: () =>
-                            PlaylistsModal.show(currentContext, track["id"]),
-                      ),
-                      if (!hideAlbum) _buildOptionTile(
-                        icon: Icons.album,
-                        title: "Go to album",
-                        onTap: () async {
-                          Navigator.pop(context);
-                          await Future.delayed(
-                              const Duration(milliseconds: 400));
-                          if (!currentContext.mounted) return;
-                          Navigator.of(currentContext).push(
-                            CupertinoPageRoute(
-                              builder: (ctx) => AlbumPage(id: track["albumid"]),
+                      if (actions.contains(TrackModalAction.favorite))
+                        _buildOptionTile(
+                          icon: track["liked"] == true
+                              ? Icons.favorite
+                              : Icons.favorite_border,
+                          iconColor: const Color(0xFFFF77A8),
+                          title: "Favorite",
+                          onTap: () => likeTrack(setState),
+                        ),
+                      if (actions.contains(TrackModalAction.queue))
+                        _buildOptionTile(
+                          icon: Icons.queue_music,
+                          title: "Add to queue",
+                          onTap: () => audioState.addTracks(
+                              [audioState.buildTrack(track, "Recommendation")]),
+                        ),
+                      if (actions.contains(TrackModalAction.playlistAdd) ||
+                          actions.contains(TrackModalAction.playlistRemove))
+                        _buildOptionTile(
+                          icon: Icons.playlist_add,
+                          title:
+                              actions.contains(TrackModalAction.playlistRemove)
+                                  ? "Remove from Playlist"
+                                  : "Add to Playlist",
+                          onTap: () =>
+                              actions.contains(TrackModalAction.playlistRemove)
+                                  ? refresh != null
+                                      ? () async {
+                                          await removeTrackFromPlaylist(ctx);
+                                          refresh();
+                                        }()
+                                      : null
+                                  : PlaylistsModal.show(
+                                      currentContext, track["id"]),
+                        ),
+                      if (actions.contains(TrackModalAction.album))
+                        _buildOptionTile(
+                          icon: Icons.album,
+                          title: "Go to album",
+                          onTap: () async {
+                            Navigator.pop(context);
+                            await Future.delayed(
+                                const Duration(milliseconds: 400));
+                            if (!currentContext.mounted) return;
+                            Navigator.of(currentContext).push(
+                              CupertinoPageRoute(
+                                builder: (ctx) =>
+                                    AlbumPage(id: track["albumid"]),
+                              ),
+                            );
+                          },
+                        ),
+                      if (track["artists"] != null &&
+                          actions.contains(TrackModalAction.artist))
+                        ...track["artists"].take(3).map(
+                              (artist) => _buildOptionTile(
+                                icon: Icons.person,
+                                title: "Go to $artist",
+                                onTap: () {},
+                              ),
                             ),
-                          );
-                        },
-                      ),
-                      if (track["artists"] != null)
-                        ...track["artists"]
-                            .take(3)
-                            .map((artist) => _buildOptionTile(
-                                  icon: Icons.person,
-                                  title: "Go to $artist",
-                                  onTap: () {},
-                                )),
                     ],
                   ),
                 ],
@@ -184,11 +231,11 @@ class TrackModal {
           ),
         ),
         Divider(
-          color: Colors.white.withOpacity(0.1),
+          color: Colors.white.withAlpha((255 * 0.1).toInt()),
           thickness: 0.3,
           indent: 12,
           endIndent: 12,
-          height: 4, // Kurangi tinggi Divider agar lebih rapat
+          height: 4,
         ),
       ],
     );
