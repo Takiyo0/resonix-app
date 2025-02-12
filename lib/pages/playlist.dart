@@ -163,14 +163,15 @@ class PlaylistPageState extends State<PlaylistPage> {
         UriAudioSource? tag;
 
         for (var track in (tracks as List? ?? [])) {
-          var t = audioState.buildTrack(track, data["name"] ?? "Playlist");
+          var t = audioState.buildTrack(track, this.data["name"] ?? "Playlist");
           tags.add(t);
-          if (track["id"] == data["id"]) tag = t;
+          if (data != null &&track["id"] == data["id"]) tag = t;
         }
 
-        if (tag == null) return;
+        if (tag == null && data != null) return;
+        tags = tags.reversed.toList();
 
-        await audioState.playAll(tags, true, tags.indexOf(tag));
+        await audioState.playAll(tags, true, data == null ? 0 : tag == null ? 0 : tags.indexOf(tag));
       } catch (e) {}
     }
 
@@ -368,7 +369,7 @@ class PlaylistPageState extends State<PlaylistPage> {
                                                       VisualDensity.compact,
                                                   onPressed: data == null
                                                       ? null
-                                                      : () {},
+                                                      : () => onTap(null, "track"),
                                                   icon: const Icon(
                                                     Icons.play_circle_fill,
                                                     color: Color(0xFFBB86FC),
