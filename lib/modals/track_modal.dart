@@ -148,7 +148,7 @@ class TrackModal {
                           icon: Icons.queue_music,
                           title: "Add to queue",
                           onTap: () => audioState.addTracks(
-                              [audioState.buildTrack(track, "Recommendation")]),
+                              [audioState.buildTrack(track, "Recommendation")], false),
                         ),
                       if (actions.contains(TrackModalAction.playlistAdd) ||
                           actions.contains(TrackModalAction.playlistRemove))

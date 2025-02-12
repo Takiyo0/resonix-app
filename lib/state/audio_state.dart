@@ -27,6 +27,7 @@ class AudioState extends ChangeNotifier {
 
   Future<void> play(UriAudioSource track, bool replace) async {
     if (playlist == null || replace) {
+      playlist?.clear();
       playlist = ConcatenatingAudioSource(children: [track]);
       await player.setAudioSource(track);
     } else {
@@ -39,6 +40,7 @@ class AudioState extends ChangeNotifier {
   Future<void> playAll(
       List<UriAudioSource> tracks, bool replace, int? index) async {
     if (playlist == null || replace) {
+      playlist?.clear();
       playlist = ConcatenatingAudioSource(children: tracks);
       if (index != null) {
         await player.setAudioSource(playlist!, initialIndex: index);
@@ -52,13 +54,27 @@ class AudioState extends ChangeNotifier {
     notifyListeners();
   }
 
-  Future<void> addTracks(List<UriAudioSource> tracks) async {
+  Future<void> addTracks(List<UriAudioSource> tracks, bool play) async {
     if (playlist == null) {
       playlist = ConcatenatingAudioSource(children: tracks);
-      player.setAudioSource(playlist!);
+      await player.setAudioSource(playlist!);
       player.play();
     } else {
-      playlist!.addAll(tracks);
+      if (!play) {
+        await playlist!.addAll(tracks);
+      } else {
+        var length = playlist!.length;
+        var oldTracks = playlist!.children;
+        playlist = ConcatenatingAudioSource(
+            children: List.from(oldTracks)..addAll(tracks));
+        await player.setAudioSource(playlist!, initialIndex: length + 1);
+        player.play();
+      }
+
+      // if (skip) {
+      //   player.seek(Duration.zero);
+      //   player.play();
+      // }
     }
 
     notifyListeners();
