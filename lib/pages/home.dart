@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:resonix/main.dart';
+import 'package:resonix/modals/album_modal.dart';
 import 'package:resonix/modals/track_modal.dart';
 import 'package:resonix/pages/album.dart';
 import 'package:resonix/pages/playlist.dart';
@@ -80,24 +81,7 @@ class HomeStatefulPage extends State<HomePage> {
       }
       if (type != "track") return;
       try {
-        var url = '${ApiService.baseUrl}/storage/track/${data["id"]}';
-        var tag = MediaItem(
-          id: data["id"] ?? "0",
-          album: data['albumname'] ?? 'Unknown Album',
-          artist:
-              data['artists']?.map((artist) => artist.toString()).join(", ") ??
-                  'Unknown Artist',
-          title: data['name'] ?? 'Unknown Title',
-          extras: {
-            "albumId": data["albumid"],
-          },
-          artUri: Uri.parse(
-              '${ApiService.baseUrl}/storage/cover/track/${data["id"]}'),
-        );
-        await audioState.player.setAudioSource(
-          AudioSource.uri(Uri.parse(url), tag: tag),
-        );
-        await audioState.player.play();
+        await audioState.play(audioState.buildTrack(data, "home"), true);
       } catch (e, stack) {}
     }
 
@@ -195,7 +179,20 @@ Widget _buildList(List<dynamic> data, String type, dynamic nowPlaying,
                                 ],
                                 item,
                                 audioState,
-                                null, null);
+                                null,
+                                null);
+                          } else if (type == "album") {
+                            AlbumModal.show(
+                                context,
+                                [
+                                  AlbumModalAction.favorite,
+                                  AlbumModalAction.queue,
+                                  AlbumModalAction.artist
+                                ],
+                                item,
+                                audioState,
+                                null,
+                                null);
                           }
                         },
                         borderRadius: BorderRadius.circular(12.0),

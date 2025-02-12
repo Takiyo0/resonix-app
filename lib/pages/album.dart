@@ -157,7 +157,7 @@ class AlbumPageState extends State<AlbumPage> {
         UriAudioSource? tag;
 
         for (var track in (tracks as List? ?? [])) {
-          var t = audioState.buildTrack(track, data["name"] ?? "Album");
+          var t = audioState.buildTrack(track, this.data["name"] ?? "Album");
           tags.add(t);
           if (track["id"] == data["id"]) tag = t;
         }
