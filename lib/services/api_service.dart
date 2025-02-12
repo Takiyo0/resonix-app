@@ -4,7 +4,7 @@ import 'package:resonix/screens/login.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 class ApiService {
-  static final baseUrl = 'http://192.168.1.5:6269';
+  static final baseUrl = 'http://192.168.1.2:6269';
   static final _dio = Dio(BaseOptions(baseUrl: baseUrl, headers: {
     "Content-Type": "application/json",
     "Accept": "application/json",
@@ -563,6 +563,69 @@ class ApiService {
             "Error ${e.response?.statusCode}"
       };
     } catch (e) {
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getNextRecommendations() async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+    if (token == null) return null;
+
+    try {
+      var response = await _dio.post('/recommendation/personalized/next',
+          options: Options(headers: {
+            "Authorization": "Bearer $token",
+          }));
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> sendPlaying(String trackId) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
+    try {
+      var response = await _dio.post(
+        "/activity/playing?trackId=$trackId",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) return null;
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      print(e);
       return {"error": "Unknown error occurred"};
     }
   }
