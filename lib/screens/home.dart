@@ -8,6 +8,7 @@ import 'package:resonix/pages/library.dart';
 import 'package:resonix/pages/now_playing.dart';
 import 'package:resonix/pages/search.dart';
 import 'package:resonix/services/api_service.dart';
+import 'package:resonix/widgets/custom_image.dart';
 
 class Home extends StatefulWidget {
   const Home({super.key});
@@ -63,24 +64,6 @@ class HomeState extends State<Home> {
   Widget build(BuildContext context) {
     final audioState = context.watch<AudioState>();
 
-    // audioState.player.playingStream.listen((playing) {
-    //   if (isPlaying != playing) {
-    //     setState(() {
-    //       isPlaying = playing;
-    //     });
-    //   }
-    // });
-
-    // audioState.player.sequenceStateStream.listen((sequenceState) {
-    //   if (sequenceState != null) {
-    //     final track = sequenceState.currentSource?.tag as MediaItem;
-    //     if (track != nowPlaying) {
-    //       nowPlaying = track;
-    //       if (track != null) ApiService.sendPlaying(track.id);
-    //       setState(() {});
-    //     }
-    //   }
-    // });
     audioState.player.playerStateStream.distinct().listen((state) async {
       if (currentProcessingState != state.processingState) {
         setState(() {
@@ -110,316 +93,269 @@ class HomeState extends State<Home> {
       body: Stack(
         children: [
           Padding(
-              padding: EdgeInsets.only(bottom: 100),
-              child: Column(
-                children: [
-                  Expanded(
-                    child: Stack(
-                      children: [
-                        Navigator(
-                          key: _navigatorKey,
-                          onGenerateRoute: (settings) {
-                            late Widget page;
-                            switch (settings.name) {
-                              case '/':
-                                page = HomePage();
-                                break;
-                              case '/search':
-                                page = SearchPage();
-                                break;
-                              case '/library':
-                                page = LibraryPage();
-                                break;
-                              default:
-                                page = HomePage();
-                            }
-                            return MaterialPageRoute(builder: (_) => page);
+            padding: EdgeInsets.only(bottom: 100),
+            child: Column(
+              children: [
+                Expanded(
+                  child: Stack(
+                    children: [
+                      Navigator(
+                        key: _navigatorKey,
+                        onGenerateRoute: (settings) {
+                          late Widget page;
+                          switch (settings.name) {
+                            case '/':
+                              page = HomePage();
+                              break;
+                            case '/search':
+                              page = SearchPage();
+                              break;
+                            case '/library':
+                              page = LibraryPage();
+                              break;
+                            default:
+                              page = HomePage();
+                          }
+                          return MaterialPageRoute(builder: (_) => page);
+                        },
+                      ),
+                      Positioned(
+                        bottom: 15,
+                        left: 14,
+                        right: 14,
+                        child: GestureDetector(
+                          onVerticalDragUpdate: (details) {
+                            var heightPercentage = details.globalPosition.dy /
+                                MediaQuery.of(context).size.height;
+                            _sheetController
+                                .jumpTo(1.0 - heightPercentage.clamp(0.1, 1.0));
                           },
-                        ),
-                        Positioned(
-                          bottom: 15,
-                          left: 14,
-                          right: 14,
-                          child: GestureDetector(
-                            onVerticalDragUpdate: (details) {
-                              var heightPercentage = details.globalPosition.dy /
-                                  MediaQuery.of(context).size.height;
-                              _sheetController.jumpTo(
-                                  1.0 - heightPercentage.clamp(0.1, 1.0));
-                            },
-                            onVerticalDragEnd: (details) {
-                              if (details.velocity.pixelsPerSecond.dy.abs() >
-                                  1000) {
+                          onVerticalDragEnd: (details) {
+                            if (details.velocity.pixelsPerSecond.dy.abs() >
+                                1000) {
+                              _sheetController.animateTo(1.0,
+                                  duration: Duration(milliseconds: 250),
+                                  curve: Curves.easeOutSine);
+                            } else {
+                              if (_sheetController.pixels >
+                                  (0.5 * MediaQuery.of(context).size.height)) {
                                 _sheetController.animateTo(1.0,
-                                    duration: Duration(milliseconds: 250),
+                                    duration: Duration(milliseconds: 300),
                                     curve: Curves.easeOutSine);
                               } else {
-                                if (_sheetController.pixels >
-                                    (0.5 *
-                                        MediaQuery.of(context).size.height)) {
-                                  _sheetController.animateTo(1.0,
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeOutSine);
-                                } else {
-                                  _sheetController.animateTo(0.0,
-                                      duration: Duration(milliseconds: 300),
-                                      curve: Curves.easeOutSine);
-                                }
+                                _sheetController.animateTo(0.0,
+                                    duration: Duration(milliseconds: 300),
+                                    curve: Curves.easeOutSine);
                               }
-                            },
-                            child: StreamBuilder(
-                              stream: audioState.player.sequenceStateStream,
-                              builder: (context, sequence) {
-                                var track = sequence.data?.currentSource?.tag
-                                    as MediaItem?;
-                                if (track != null) {
-                                  ApiService.sendPlaying(track.id);
-                                }
-                                return Visibility(
-                                  visible: _index != 4,
-                                  child: InkWell(
-                                    onTap: () {
-                                      _sheetController.animateTo(1.0,
-                                          duration: Duration(milliseconds: 300),
-                                          curve: Curves.easeOut);
-                                    },
-                                    child: ClipRRect(
-                                      borderRadius: BorderRadius.circular(15.0),
-                                      child: BackdropFilter(
-                                        filter: ImageFilter.blur(
-                                            sigmaX: 20, sigmaY: 20),
-                                        child: Container(
-                                          height: 70,
-                                          color: Colors.white.withAlpha(30),
-                                          child: Stack(
-                                            children: [
-                                              StreamBuilder(
-                                                  stream: audioState
-                                                      .player.positionStream,
-                                                  builder: (context, snapshot) {
-                                                    final duration = audioState
-                                                        .player.duration;
-                                                    final position =
-                                                        snapshot.data ??
-                                                            Duration.zero;
-                                                    double progress = 0;
-                                                    if (duration != null) {
-                                                      progress = duration
-                                                                  .inMilliseconds >
-                                                              0
-                                                          ? position
-                                                                  .inMilliseconds /
-                                                              duration
-                                                                  .inMilliseconds
-                                                          : 0.0;
-                                                    }
-                                                    return Positioned.fill(
-                                                      child:
-                                                          FractionallySizedBox(
-                                                        alignment: Alignment
-                                                            .centerLeft,
-                                                        widthFactor: progress,
-                                                        child: Container(
-                                                          decoration:
-                                                              BoxDecoration(
-                                                            color: Colors.white
-                                                                .withAlpha(30),
-                                                            borderRadius:
-                                                                BorderRadius
-                                                                    .circular(
-                                                                        15.0),
+                            }
+                          },
+                          child: StreamBuilder(
+                            stream: audioState.player.sequenceStateStream,
+                            builder: (context, sequence) {
+                              var track = sequence.data?.currentSource?.tag
+                                  as MediaItem?;
+                              if (track != null) {
+                                ApiService.sendPlaying(track.id);
+                              }
+                              return Visibility(
+                                visible: _index != 4,
+                                child: InkWell(
+                                  onTap: () {
+                                    _sheetController.animateTo(1.0,
+                                        duration: Duration(milliseconds: 300),
+                                        curve: Curves.easeOut);
+                                  },
+                                  child: ClipRRect(
+                                    borderRadius: BorderRadius.circular(12.0),
+                                    child: BackdropFilter(
+                                      filter: ImageFilter.blur(
+                                          sigmaX: 20, sigmaY: 20),
+                                      child: Container(
+                                        height: 70,
+                                        color: Colors.white.withAlpha(30),
+                                        child: Stack(
+                                          children: [
+                                            StreamBuilder(
+                                              stream: audioState
+                                                  .player.positionStream,
+                                              builder: (context, snapshot) {
+                                                final duration =
+                                                    audioState.player.duration;
+                                                final position =
+                                                    snapshot.data ??
+                                                        Duration.zero;
+                                                double progress = 0;
+                                                if (duration != null) {
+                                                  progress = duration
+                                                              .inMilliseconds >
+                                                          0
+                                                      ? position
+                                                              .inMilliseconds /
+                                                          duration
+                                                              .inMilliseconds
+                                                      : 0.0;
+                                                }
+                                                return Positioned.fill(
+                                                  child: FractionallySizedBox(
+                                                    alignment:
+                                                        Alignment.centerLeft,
+                                                    widthFactor: progress,
+                                                    child: Container(
+                                                      decoration: BoxDecoration(
+                                                        color: Colors.white
+                                                            .withAlpha(30),
+                                                        borderRadius:
+                                                            BorderRadius
+                                                                .circular(15.0),
+                                                      ),
+                                                    ),
+                                                  ),
+                                                );
+                                              },
+                                            ),
+                                            Container(
+                                              height: 70,
+                                              padding: const EdgeInsets.all(5),
+                                              decoration: BoxDecoration(
+                                                color:
+                                                    Colors.white.withAlpha(30),
+                                                borderRadius:
+                                                    BorderRadius.circular(12.0),
+                                                border: Border.all(
+                                                    color: Colors.white
+                                                        .withAlpha(20)),
+                                              ),
+                                              alignment: Alignment.center,
+                                              child: Row(
+                                                mainAxisAlignment:
+                                                    MainAxisAlignment.start,
+                                                crossAxisAlignment:
+                                                    CrossAxisAlignment.center,
+                                                children: [
+                                                  CustomImage(
+                                                      imageUrl: track?.artUri
+                                                              ?.toString() ??
+                                                          "",
+                                                      height: 60,
+                                                      width: 60),
+                                                  const SizedBox(width: 10),
+                                                  Expanded(
+                                                    child: Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .start,
+                                                      mainAxisAlignment:
+                                                          MainAxisAlignment
+                                                              .center,
+                                                      children: [
+                                                        Text(
+                                                          track?.title ??
+                                                              "No track playing",
+                                                          style:
+                                                              const TextStyle(
+                                                            color: Colors.white,
+                                                            fontSize: 16,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                        Text(
+                                                          track?.artist ??
+                                                              "No artist",
+                                                          style:
+                                                              const TextStyle(
+                                                            color: Color(
+                                                                0xFFB3B3B3),
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w400,
+                                                          ),
+                                                          maxLines: 1,
+                                                          overflow: TextOverflow
+                                                              .ellipsis,
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ),
+                                                  StreamBuilder(
+                                                    stream: audioState
+                                                        .player.playingStream,
+                                                    builder:
+                                                        (context, snapshot) {
+                                                      var isPlaying =
+                                                          snapshot.data ??
+                                                              false;
+                                                      return IconButton(
+                                                        onPressed: track == null || currentProcessingState != ProcessingState.ready
+                                                            ? null
+                                                            : () {
+                                                                if (isPlaying) {
+                                                                  audioState
+                                                                      .player
+                                                                      .pause();
+                                                                } else {
+                                                                  audioState
+                                                                      .player
+                                                                      .play();
+                                                                }
+                                                              },
+                                                        icon: AnimatedSwitcher(
+                                                          duration:
+                                                              const Duration(
+                                                                  milliseconds:
+                                                                      200),
+                                                          transitionBuilder:
+                                                              (child,
+                                                                  animation) {
+                                                            return ScaleTransition(
+                                                                scale:
+                                                                    animation,
+                                                                child: child);
+                                                          },
+                                                          child: Icon(
+                                                            currentProcessingState == ProcessingState.buffering
+                                                                ? Icons
+                                                                    .hourglass_empty
+                                                                : isPlaying
+                                                                    ? Icons
+                                                                        .pause
+                                                                    : Icons
+                                                                        .play_arrow,
+                                                            key: ValueKey(
+                                                                isPlaying),
+                                                            size: 30,
+                                                            color: track == null
+                                                                ? Colors.grey
+                                                                    .shade500
+                                                                : Colors.white,
                                                           ),
                                                         ),
-                                                      ),
-                                                    );
-                                                  }),
-                                              Container(
-                                                height: 70,
-                                                padding:
-                                                    const EdgeInsets.all(5),
-                                                decoration: BoxDecoration(
-                                                  color: Colors.white
-                                                      .withAlpha(30),
-                                                  borderRadius:
-                                                      BorderRadius.circular(
-                                                          15.0),
-                                                  border: Border.all(
-                                                      color: Colors.white
-                                                          .withAlpha(20)),
-                                                ),
-                                                alignment: Alignment.center,
-                                                child: Row(
-                                                  mainAxisAlignment:
-                                                      MainAxisAlignment.start,
-                                                  crossAxisAlignment:
-                                                      CrossAxisAlignment.center,
-                                                  children: [
-                                                    Container(
-                                                      width: 60,
-                                                      height: 60,
-                                                      decoration: BoxDecoration(
-                                                        color: Colors.black,
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8.0),
-                                                      ),
-                                                      child: ClipRRect(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(8.0),
-                                                        child: track == null
-                                                            ? const Center(
-                                                                child: Icon(
-                                                                    Icons
-                                                                        .music_note,
-                                                                    color: Colors
-                                                                        .white),
-                                                              )
-                                                            : Image.network(
-                                                                track.artUri
-                                                                        ?.toString() ??
-                                                                    "",
-                                                                fit: BoxFit
-                                                                    .cover,
-                                                                errorBuilder:
-                                                                    (context,
-                                                                        error,
-                                                                        stackTrace) {
-                                                                  return const Center(
-                                                                    child: Icon(
-                                                                        Icons
-                                                                            .music_note,
-                                                                        color: Colors
-                                                                            .white),
-                                                                  );
-                                                                },
-                                                              ),
-                                                      ),
-                                                    ),
-                                                    const SizedBox(width: 10),
-                                                    Expanded(
-                                                      child: Column(
-                                                        crossAxisAlignment:
-                                                            CrossAxisAlignment
-                                                                .start,
-                                                        mainAxisAlignment:
-                                                            MainAxisAlignment
-                                                                .center,
-                                                        children: [
-                                                          Text(
-                                                            track?.title ??
-                                                                "No track playing",
-                                                            style:
-                                                                const TextStyle(
-                                                              color:
-                                                                  Colors.white,
-                                                              fontSize: 16,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w600,
-                                                            ),
-                                                            maxLines: 1,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                          Text(
-                                                            track?.artist ??
-                                                                "No artist",
-                                                            style:
-                                                                const TextStyle(
-                                                              color: Color(
-                                                                  0xFFB3B3B3),
-                                                              fontSize: 14,
-                                                              fontWeight:
-                                                                  FontWeight
-                                                                      .w400,
-                                                            ),
-                                                            maxLines: 1,
-                                                            overflow:
-                                                                TextOverflow
-                                                                    .ellipsis,
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    ),
-                                                    StreamBuilder(
-                                                        stream: audioState
-                                                            .player
-                                                            .playingStream,
-                                                        builder: (context,
-                                                            snapshot) {
-                                                          var isPlaying =
-                                                              snapshot.data ??
-                                                                  false;
-                                                          return IconButton(
-                                                            onPressed:
-                                                                track == null
-                                                                    ? null
-                                                                    : () {
-                                                                        if (isPlaying) {
-                                                                          audioState
-                                                                              .player
-                                                                              .pause();
-                                                                        } else {
-                                                                          audioState
-                                                                              .player
-                                                                              .play();
-                                                                        }
-                                                                      },
-                                                            icon:
-                                                                AnimatedSwitcher(
-                                                              duration:
-                                                                  const Duration(
-                                                                      milliseconds:
-                                                                          200),
-                                                              transitionBuilder:
-                                                                  (child,
-                                                                      animation) {
-                                                                return ScaleTransition(
-                                                                    scale:
-                                                                        animation,
-                                                                    child:
-                                                                        child);
-                                                              },
-                                                              child: Icon(
-                                                                isPlaying
-                                                                    ? CupertinoIcons
-                                                                        .pause_fill
-                                                                    : CupertinoIcons
-                                                                        .play_fill,
-                                                                key: ValueKey(
-                                                                    isPlaying),
-                                                                size: 30,
-                                                                color: track == null
-                                                                    ? Colors
-                                                                        .grey
-                                                                        .shade500
-                                                                    : Colors
-                                                                        .white,
-                                                              ),
-                                                            ),
-                                                          );
-                                                        })
-                                                  ],
-                                                ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ],
                                               ),
-                                            ],
-                                          ),
+                                            ),
+                                          ],
                                         ),
                                       ),
                                     ),
                                   ),
-                                );
-                              },
-                            ),
+                                ),
+                              );
+                            },
                           ),
                         ),
-                      ],
-                    ),
-                  )
-                ],
-              )),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
           Positioned(
               left: 0,
               right: 0,
