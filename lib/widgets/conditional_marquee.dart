@@ -6,6 +6,7 @@ class ConditionalMarqueeText extends StatefulWidget {
   final double containerWidth;
   final TextStyle style;
   final double velocity;
+  final double height;
 
   const ConditionalMarqueeText({
     super.key,
@@ -17,6 +18,7 @@ class ConditionalMarqueeText extends StatefulWidget {
       fontWeight: FontWeight.bold,
     ),
     this.velocity = 30,
+    this.height = 30,
   });
 
   @override
@@ -48,7 +50,7 @@ class _ConditionalMarqueeTextState extends State<ConditionalMarqueeText> {
   Widget build(BuildContext context) {
     _calculateTextWidth();
     return SizedBox(
-      height: 30,
+      height: widget.height,
       width: widget.containerWidth,
       child: textWidth > widget.containerWidth
           ? Marquee(
