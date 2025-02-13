@@ -1,5 +1,5 @@
 name: resonix
-description: "A new Flutter project."
+description: "A self-hosted music player for your personal music collection."
 # The following line prevents the package from being accidentally published to
 # pub.dev using `flutter pub publish`. This is preferred for private packages.
 publish_to: 'none' # Remove this line if you wish to publish to pub.dev
@@ -52,6 +52,7 @@ dependencies:
   interactive_slider: ^0.5.1
   marquee: ^2.3.0
   haptic_feedback: ^0.5.1+1
+  flutter_launcher_icons: ^0.14.3
 
 dev_dependencies:
   flutter_test:
@@ -63,6 +64,20 @@ dev_dependencies:
   # package. See that file for information about deactivating specific lint
   # rules and activating additional ones.
   flutter_lints: ^5.0.0
+
+
+flutter_launcher_icons:
+  android: "launcher_icon"
+  ios: true
+  image_path: "assets/sq_logo_x512.png"
+  min_sdk_android: 21
+  windows:
+    generate: true
+    image_path: "assets/sq_logo_x512.png"
+    icon_size: 48
+  macos:
+    generate: true
+    image_path: "assets/sq_logo_x512.png"
 
 # For information on the generic Dart part of this file, see the
 # following page: https://dart.dev/tools/pub/pubspec
