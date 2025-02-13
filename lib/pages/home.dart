@@ -331,22 +331,11 @@ Widget _buildCoverImage(
     String type, dynamic item, double size, bool? isNowPlaying) {
   return Stack(
     children: [
-      Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          color: Colors.black,
-          borderRadius: BorderRadius.circular(8.0),
-        ),
-        child: ClipRRect(
-          borderRadius: BorderRadius.circular(8.0),
-          child: CustomImage(
+      CustomImage(
             imageUrl: '${ApiService.baseUrl}/storage/cover/$type/${item["id"]}',
             height: size.toInt(),
             width: size.toInt(),
           ),
-        ),
-      ),
       if (isNowPlaying == true)
         Positioned(
           bottom: 7,
