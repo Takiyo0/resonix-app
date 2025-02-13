@@ -273,7 +273,7 @@ Widget _buildList(
   }
 
   return SizedBox(
-    height: 210,
+    height: 215,
     child: ListView.builder(
       scrollDirection: Axis.horizontal,
       itemCount: data.length,
