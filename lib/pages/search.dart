@@ -5,47 +5,16 @@ import 'package:flutter/cupertino.dart';
 import 'package:resonix/main.dart';
 import 'package:resonix/pages/album.dart';
 import 'package:resonix/services/api_service.dart';
+import 'package:resonix/widgets/custom_image.dart';
 
-class SearchPage extends StatelessWidget {
+class SearchPage extends StatefulWidget {
   const SearchPage({super.key});
-
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Colors.transparent,
-      resizeToAvoidBottomInset: false,
-      appBar: AppBar(
-        title: const Text('Search'),
-        backgroundColor: Colors.transparent,
-        elevation: 0,
-        flexibleSpace: ClipRRect(
-          child: BackdropFilter(
-            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
-            child: Container(
-              color: Colors.white.withAlpha(25),
-            ),
-          ),
-        ),
-        foregroundColor: Colors.white,
-        centerTitle: false,
-        titleTextStyle: const TextStyle(
-          fontWeight: FontWeight.bold,
-          fontSize: 24,
-        ),
-      ),
-      body: SearchStatefulPage(),
-    );
-  }
-}
-
-class SearchStatefulPage extends StatefulWidget {
-  const SearchStatefulPage({super.key});
 
   @override
   SearchPageState createState() => SearchPageState();
 }
 
-class SearchPageState extends State<SearchStatefulPage> {
+class SearchPageState extends State<SearchPage> {
   Timer? _throttle;
   var _searchQuery = "";
   bool error = false;
@@ -81,15 +50,6 @@ class SearchPageState extends State<SearchStatefulPage> {
     }
   }
 
-  // @override
-  // void initState() {
-  //   super.initState();
-  //   setState(() {
-  //     _searchQuery = "d";
-  //   });
-  //   _search();
-  // }
-
   @override
   void dispose() {
     _throttle?.cancel();
@@ -108,64 +68,59 @@ class SearchPageState extends State<SearchStatefulPage> {
         );
       }
       if (type != "track") return;
-      try {
-        await audioState.play(
-            audioState.buildTrack(data, "Search on $_searchQuery"), true);
-      } catch (e) {}
+      await audioState.play(
+          audioState.buildTrack(data, "Search on $_searchQuery"), true);
     }
 
-    return GestureDetector(
-      onTap: () => FocusScope.of(context).unfocus(),
-      behavior: HitTestBehavior.opaque,
-      child: Container(
-        color: Colors.transparent,
-        height: double.infinity,
-        child: Column(
-          children: [
-            const SizedBox(height: 20),
-            Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 15),
-              child: CupertinoSearchTextField(
-                placeholder: 'Search',
-                style: TextStyle(color: Colors.white),
-                onChanged: _onSearchChanged,
-              ),
+    return Scaffold(
+      backgroundColor: Colors.transparent,
+      resizeToAvoidBottomInset: false,
+      appBar: AppBar(
+        title: Text('Search', style: TextStyle(color: Colors.white)),
+        backgroundColor: Colors.transparent,
+        leading: const Icon(Icons.search, color: Colors.white, size: 32),
+        titleSpacing: 0,
+        flexibleSpace: ClipRRect(
+          child: BackdropFilter(
+            filter: ImageFilter.blur(sigmaX: 10, sigmaY: 10),
+            child: Container(
+              color: Colors.white.withAlpha(0),
             ),
-            Expanded(
-              child: _searchQuery.isEmpty
-                  ? Center(
-                      child: Text('Start typing to search',
-                          style: TextStyle(color: Colors.white, fontSize: 18)),
-                    )
-                  : ListView(
-                      padding: const EdgeInsets.only(
-                          top: 16.0, left: 16.0, right: 16.0, bottom: 120.0),
-                      children: [
-                        const Text("Tracks",
-                            style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        _buildList(_trackData, "track",
-                            (data) => onTap(data, "track")),
-                        const SizedBox(height: 20),
-                        const Text("Albums",
-                            style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        _buildList(_albumData, "album",
-                            (data) => onTap(data, "album")),
-                        const SizedBox(height: 20),
-                        const Text("Playlists",
-                            style: TextStyle(
-                                fontSize: 22,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.white)),
-                        _buildList(_playlistData, "playlist",
-                            (data) => onTap(data, "playlist")),
-                      ],
-                    ),
+          ),
+        ),
+        foregroundColor: Colors.white,
+        centerTitle: false,
+        titleTextStyle: const TextStyle(
+          fontWeight: FontWeight.bold,
+          fontSize: 24,
+        ),
+      ),
+      body: GestureDetector(
+        onTap: () => FocusScope.of(context).unfocus(),
+        behavior: HitTestBehavior.opaque,
+        child: Stack(
+          children: [
+            _buildBackground(),
+            Column(
+              children: [
+                const SizedBox(height: 15),
+                Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 15),
+                  child: CupertinoSearchTextField(
+                    placeholder: 'Search something...',
+                    style: TextStyle(color: Colors.white),
+                    onChanged: _onSearchChanged,
+                  ),
+                ),
+                Expanded(
+                  child: AnimatedSwitcher(
+                    duration: const Duration(milliseconds: 300),
+                    child: _searchQuery.isEmpty
+                        ? _buildEmptyState()
+                        : _buildSearchResults(onTap),
+                  ),
+                ),
+              ],
             ),
           ],
         ),
@@ -173,107 +128,127 @@ class SearchPageState extends State<SearchStatefulPage> {
     );
   }
 
-  Widget _buildList(
-      List<dynamic> data, String type, ValueChanged<dynamic> onTap) {
-    return data.isEmpty
-        ? Center(
-            child:
-                Text("No $type found", style: TextStyle(color: Colors.white)),
-          )
-        : Column(
-            children: data.map((item) {
-            return Container(
-              color: Colors.transparent,
-              margin: const EdgeInsets.only(bottom: 10),
-              child: Ink(
-                decoration: BoxDecoration(
-                  color: const Color(0xFF1A0E2E),
-                  borderRadius: BorderRadius.circular(12.0),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.black.withOpacity(0.2),
-                      spreadRadius: 2,
-                      blurRadius: 5,
-                      offset: const Offset(0, 4),
-                    ),
-                  ],
-                ),
-                child: InkWell(
-                  onTap: () => onTap(item),
-                  borderRadius: BorderRadius.circular(12.0),
-                  splashColor: Colors.white.withOpacity(0.2),
-                  highlightColor: Colors.white.withOpacity(0.1),
-                  child: Container(
-                    padding: const EdgeInsets.all(6),
-                    width: double.infinity,
-                    child: Row(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        Container(
-                          width: 60,
-                          height: 60,
-                          decoration: BoxDecoration(
-                            color: Colors.black,
-                            borderRadius: BorderRadius.circular(8.0),
-                          ),
-                          child: ClipRRect(
-                            borderRadius: BorderRadius.circular(8.0),
-                            child: Image.network(
-                              '${ApiService.baseUrl}/storage/cover/$type/${item["id"]}',
-                              fit: BoxFit.cover,
-                              errorBuilder: (context, error, stackTrace) {
-                                return const Center(
-                                  child: Icon(
-                                    Icons.music_note,
-                                    color: Colors.white,
-                                  ),
-                                );
-                              },
-                            ),
-                          ),
-                        ),
-                        const SizedBox(width: 10),
-                        Expanded(
-                            child: Column(
-                          children: [
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                item['name'],
-                                style: const TextStyle(
-                                    color: Colors.white,
-                                    fontSize: 16,
-                                    fontWeight: FontWeight.w600),
-                                maxLines: 1,
-                                textAlign: TextAlign.left,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            ),
-                            const SizedBox(height: 3),
-                            Align(
-                              alignment: Alignment.centerLeft,
-                              child: Text(
-                                item['artists']
-                                        ?.map((artist) => artist.toString())
-                                        .join(", ") ??
-                                    "Unknown Artist",
-                                style: const TextStyle(
-                                    color: Colors.grey,
-                                    fontSize: 13,
-                                    fontWeight: FontWeight.w600),
-                                maxLines: 1,
-                                textAlign: TextAlign.left,
-                                overflow: TextOverflow.ellipsis,
-                              ),
-                            )
-                          ],
-                        ))
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            );
-          }).toList());
+  Widget _buildBackground() {
+    return Container(
+      decoration: BoxDecoration(
+        gradient: LinearGradient(
+          colors: [Colors.black, Color(0xFF1A0E2E)],
+          begin: Alignment.topCenter,
+          end: Alignment.bottomCenter,
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyState() {
+    return Center(
+      child: Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Icon(Icons.search, size: 50, color: Colors.grey[700]),
+          const SizedBox(height: 10),
+          Text(
+            'Start typing to search',
+            style: TextStyle(color: Colors.white, fontSize: 18),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildSearchResults(Function onTap) {
+    return ListView(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+      children: [
+        _buildSection("Tracks", _trackData, "track", onTap),
+        _buildSection("Albums", _albumData, "album", onTap),
+        _buildSection("Playlists", _playlistData, "playlist", onTap),
+      ],
+    );
+  }
+
+  Widget _buildSection(
+      String title, List<dynamic> data, String type, Function onTap) {
+    if (data.isEmpty) return const SizedBox();
+
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Padding(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          child: Text(
+            title,
+            style: const TextStyle(
+                fontSize: 22, fontWeight: FontWeight.bold, color: Colors.white),
+          ),
+        ),
+        ...data.map((item) => _buildListItem(item, type, onTap)),
+        const SizedBox(height: 20),
+      ],
+    );
+  }
+
+  Widget _buildListItem(dynamic item, String type, Function onTap) {
+    return GestureDetector(
+      onTap: () => onTap(item, type),
+      child: Container(
+        margin: const EdgeInsets.symmetric(vertical: 6.0),
+        decoration: BoxDecoration(
+          color: Color(0xFF28123E),
+          borderRadius: BorderRadius.circular(12.0),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withAlpha((255 * 0.2).toInt()),
+              blurRadius: 4,
+              offset: const Offset(0, 4),
+            ),
+          ],
+        ),
+        child: Padding(
+          padding: const EdgeInsets.all(7.0),
+          child: Row(
+            children: [
+              _buildItemImage(item, type),
+              const SizedBox(width: 10),
+              _buildItemInfo(item),
+              const Icon(Icons.chevron_right, color: Colors.grey, size: 24),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildItemImage(dynamic item, String type) {
+    return CustomImage(
+      imageUrl: '${ApiService.baseUrl}/storage/cover/$type/${item["id"]}',
+      height: 55,
+      width: 55,
+    );
+  }
+
+  Widget _buildItemInfo(dynamic item) {
+    return Expanded(
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            item["name"],
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(
+                color: Colors.white, fontSize: 16, fontWeight: FontWeight.w600),
+          ),
+          const SizedBox(height: 3),
+          Text(
+            item["artists"]?.map((artist) => artist.toString()).join(", ") ??
+                "Unknown Artist",
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: TextStyle(color: Colors.grey[400], fontSize: 13),
+          ),
+        ],
+      ),
+    );
   }
 }
