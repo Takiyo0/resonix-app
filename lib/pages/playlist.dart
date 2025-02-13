@@ -1,6 +1,5 @@
 import 'dart:ui';
 
-import 'package:flutter/scheduler.dart';
 import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:palette_generator/palette_generator.dart';
 import 'package:resonix/main.dart';
@@ -74,16 +73,15 @@ class PlaylistPageState extends State<PlaylistPage> {
 
   Future<void> follow() async {
     if (data == null) return;
-    return;
-    var response = await ApiService.likeAlbum(widget.id);
+    var response = await ApiService.followPlaylist(widget.id);
     if (!mounted) return;
     if (response != null) {
       if (response["error"] != null) {
         return ApiService.returnError(context, response["error"]);
       }
       setState(() {
-        data["liked"] = response["liked"];
-        data["likedCount"] = response["likedCount"];
+        data["followed"] = response["followed"];
+        data["followcount"] = response["followcount"];
       });
     } else {
       await ApiService.returnTokenExpired(context);
@@ -157,22 +155,27 @@ class PlaylistPageState extends State<PlaylistPage> {
 
     Future<void> onTap(dynamic data, String type) async {
       FocusScope.of(context).unfocus();
-      if (type != "track") return;
-      try {
-        List<UriAudioSource> tags = [];
-        UriAudioSource? tag;
+      if (type != "track" && type != "playlist") return;
+      List<UriAudioSource> tags = [];
+      UriAudioSource? tag;
 
-        for (var track in (tracks as List? ?? [])) {
-          var t = audioState.buildTrack(track, this.data["name"] ?? "Playlist");
-          tags.add(t);
-          if (data != null &&track["id"] == data["id"]) tag = t;
-        }
+      for (var track in (tracks as List? ?? [])) {
+        var t = audioState.buildTrack(track, this.data["name"] ?? "Playlist");
+        tags.add(t);
+        if (data != null && track["id"] == data["id"]) tag = t;
+      }
 
-        if (tag == null && data != null) return;
-        tags = tags.reversed.toList();
+      if (tag == null && data != null) return;
+      tags = tags.reversed.toList();
 
-        await audioState.playAll(tags, true, data == null ? 0 : tag == null ? 0 : tags.indexOf(tag));
-      } catch (e) {}
+      await audioState.playAll(
+          tags,
+          true,
+          data == null
+              ? 0
+              : tag == null
+                  ? 0
+                  : tags.indexOf(tag));
     }
 
     return VisibilityDetector(
@@ -369,7 +372,8 @@ class PlaylistPageState extends State<PlaylistPage> {
                                                       VisualDensity.compact,
                                                   onPressed: data == null
                                                       ? null
-                                                      : () => onTap(null, "track"),
+                                                      : () =>
+                                                          onTap(null, "playlist"),
                                                   icon: const Icon(
                                                     Icons.play_circle_fill,
                                                     color: Color(0xFFBB86FC),

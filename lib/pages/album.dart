@@ -151,21 +151,20 @@ class AlbumPageState extends State<AlbumPage> {
 
     Future<void> onTap(dynamic data, String type) async {
       FocusScope.of(context).unfocus();
-      if (type != "track") return;
-      try {
-        List<UriAudioSource> tags = [];
-        UriAudioSource? tag;
+      if (type != "track" && type != "album") return;
+      List<UriAudioSource> tags = [];
+      UriAudioSource? tag;
 
-        for (var track in (tracks as List? ?? [])) {
-          var t = audioState.buildTrack(track, this.data["name"] ?? "Album");
-          tags.add(t);
-          if (track["id"] == data["id"]) tag = t;
-        }
+      for (var track in (tracks as List? ?? [])) {
+        var t = audioState.buildTrack(track, this.data["name"] ?? "Album");
+        tags.add(t);
+        if (data != null && track["id"] == data["id"]) tag = t;
+      }
 
-        if (tag == null) return;
+      if (tag == null && data != null) return;
 
-        await audioState.playAll(tags, true, tags.indexOf(tag));
-      } catch (e) {}
+      await audioState.playAll(
+          tags, true, tag == null ? null : tags.indexOf(tag));
     }
 
     return VisibilityDetector(
@@ -366,7 +365,7 @@ class AlbumPageState extends State<AlbumPage> {
                                                       VisualDensity.compact,
                                                   onPressed: data == null
                                                       ? null
-                                                      : () {},
+                                                      : () => onTap(null, "album"),
                                                   icon: const Icon(
                                                     Icons.play_circle_fill,
                                                     color: Color(0xFFBB86FC),
@@ -445,7 +444,8 @@ class AlbumPageState extends State<AlbumPage> {
                                                           ],
                                                           track,
                                                           audioState,
-                                                          null, null);
+                                                          null,
+                                                          null);
                                                     },
                                                     borderRadius:
                                                         BorderRadius.circular(
