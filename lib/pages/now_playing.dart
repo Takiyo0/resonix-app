@@ -7,6 +7,7 @@ import 'package:resonix/services/api_service.dart';
 import 'package:resonix/widgets/animated_next_button_widget.dart';
 import 'package:resonix/widgets/animated_prev_button_widget.dart';
 import 'package:resonix/widgets/conditional_marquee.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:shimmer/shimmer.dart';
 
 import '../widgets/custom_image.dart';
@@ -28,8 +29,14 @@ class NowPlayingPageState extends State<NowPlayingPage>
   late InteractiveSliderController _sliderController;
   late AnimationController _globalController;
   late AnimationController _queueController;
+  late AnimationController _lyricsController;
   late Animation<double> _mainTransform;
   late Animation<double> _mainOpacity;
+
+  late Animation<double> _coverWidth;
+  late Animation<double> _coverHeight;
+
+  bool isSet = false;
 
   @override
   void initState() {
@@ -43,14 +50,25 @@ class NowPlayingPageState extends State<NowPlayingPage>
       vsync: this,
       duration: const Duration(milliseconds: 500),
     );
+    _lyricsController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 500),
+    );
+
     _mainTransform = Tween<double>(begin: 0, end: -10).animate(
       CurvedAnimation(
         parent: _globalController,
         curve: Curves.easeInOutSine,
       ),
     );
-
     _mainOpacity = Tween<double>(begin: 1, end: 0).animate(
+      CurvedAnimation(
+        parent: _globalController,
+        curve: Curves.easeInOutSine,
+      ),
+    );
+
+    _coverWidth = _coverHeight = Tween<double>(begin: 100, end: 100).animate(
       CurvedAnimation(
         parent: _globalController,
         curve: Curves.easeInOutSine,
@@ -59,45 +77,58 @@ class NowPlayingPageState extends State<NowPlayingPage>
   }
 
   void setPage(int page) {
-    if (page != 0) {
-      _globalController.forward();
-    } else {
+    if (page != 0 && _currentPage.value == page) {
+      _currentPage.value = 0;
       _globalController.reverse();
-    }
-
-    if (page == 1) {
-      _queueController.forward();
-    } else {
       _queueController.reverse();
+      _lyricsController.reverse();
+      return;
     }
-  }
 
-  final GlobalKey<AnimatedListState> _listKey = GlobalKey<AnimatedListState>();
+    _currentPage.value = page;
+    _globalController.animateTo(page != 0 ? 1 : 0);
+    _queueController.animateTo(page == 1 ? 1 : 0);
+    _lyricsController.animateTo(page == 2 ? 1 : 0);
+  }
 
 
   @override
   Widget build(BuildContext context) {
     final audioState = context.watch<AudioState>();
+    void startAnimation() {
+      if (isSet) return;
+      setState(() {
+        isSet = true;
+        _coverWidth = Tween<double>(
+          begin: MediaQuery.of(context).size.width - 60,
+          end: 65,
+        ).animate(CurvedAnimation(
+            parent: _globalController, curve: Curves.easeInOut));
+        _coverHeight = Tween<double>(
+          begin: MediaQuery.of(context).size.width - 60,
+          end: 65,
+        ).animate(CurvedAnimation(
+            parent: _globalController, curve: Curves.easeInOut));
+      });
+    }
+
+    startAnimation();
 
     Widget buildListTile(MediaItem? item, int index) {
       void removeItem() {
-        final removedItem = (audioState.playlist![index] as ProgressiveAudioSource?)?.tag as MediaItem?;
         audioState.playlist!.removeAt(index);
-
-        _listKey.currentState?.removeItem(
-          index,
-              (context, animation) => SizeTransition(
-            sizeFactor: animation,
-            child: buildListTile(removedItem, index),
-          ),
-          duration: const Duration(milliseconds: 300),
-        );
       }
 
       return ListTile(
         contentPadding: const EdgeInsets.only(right: 12, left: 26),
-        title: Text(item?.title ?? "Unknown Title", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: Colors.white)),
-        subtitle: Text(item?.artist ?? "Unknown Artist", maxLines: 1, overflow: TextOverflow.ellipsis, style: const TextStyle(color: CupertinoColors.systemGrey)),
+        title: Text(item?.title ?? "Unknown Title",
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: Colors.white)),
+        subtitle: Text(item?.artist ?? "Unknown Artist",
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            style: const TextStyle(color: CupertinoColors.systemGrey)),
         leading: CustomImage(
           imageUrl: '${ApiService.baseUrl}/storage/cover/track/${item?.id}',
           height: 50,
@@ -113,8 +144,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
         },
       );
     }
-
-
 
     audioState.player.positionStream.listen((position) {
       final duration = audioState.player.duration;
@@ -140,7 +169,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                 StreamBuilder(
                   stream: audioState.player.sequenceStateStream,
                   builder: (ctx, snapshot) {
-                    final sequenceState = snapshot.data;
                     final nowPlaying =
                         snapshot.data?.currentSource?.tag as MediaItem?;
                     return Stack(
@@ -152,10 +180,10 @@ class NowPlayingPageState extends State<NowPlayingPage>
                               children: [
                                 ImageFiltered(
                                   imageFilter:
-                                      ImageFilter.blur(sigmaX: 20, sigmaY: 20),
+                                      ImageFilter.blur(sigmaX: 40, sigmaY: 40),
                                   child: CachedNetworkImage(
                                     imageUrl:
-                                        '${ApiService.baseUrl}/storage/cover/track/${nowPlaying?.id}',
+                                        '${ApiService.baseUrl}/storage/cover/track/${nowPlaying.id}',
                                     fit: BoxFit.cover,
                                     errorWidget: (context, error, stackTrace) =>
                                         Container(color: Colors.transparent),
@@ -209,6 +237,7 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                       //   ),
                                     ],
                                   ),
+                                  const SizedBox(height: 25),
                                   Expanded(
                                     child: Padding(
                                       padding: const EdgeInsets.symmetric(
@@ -218,302 +247,260 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                         child: Stack(
                                           children: [
                                             // main cover
-                                            Padding(
-                                              padding: const EdgeInsets.only(
-                                                  bottom: 50),
-                                              child: AnimatedBuilder(
-                                                animation: _globalController,
-                                                builder: (ctx, child) {
-                                                  return Transform.translate(
-                                                    offset: Offset(0,
-                                                        _mainTransform.value),
-                                                    child: Opacity(
-                                                      opacity:
-                                                          _mainOpacity.value,
-                                                      child: StreamBuilder(
-                                                        stream: audioState
-                                                            .player
-                                                            .playingStream,
-                                                        builder:
-                                                            (ctx, snapshot) {
-                                                          var isPlaying =
-                                                              snapshot?.data ??
-                                                                  false;
-                                                          return SizedBox(
-                                                            child: Center(
-                                                              child:
-                                                                  AnimatedScale(
-                                                                scale: isPlaying
-                                                                    ? 1.0
-                                                                    : 0.7,
-                                                                duration:
-                                                                    const Duration(
-                                                                        milliseconds:
-                                                                            500),
-                                                                curve: Cubic(
+                                            AnimatedBuilder(
+                                              animation: _globalController,
+                                              builder: (ctx, child) {
+                                                return Positioned(
+                                                  width: _coverWidth.value,
+                                                  height: _coverHeight.value,
+                                                  child: StreamBuilder(
+                                                    stream: audioState
+                                                        .player.playingStream,
+                                                    builder: (ctx, snapshot) {
+                                                      var isPlaying =
+                                                          snapshot.data ??
+                                                              false;
+                                                      return SizedBox(
+                                                        child: Center(
+                                                          child: AnimatedScale(
+                                                            scale: isPlaying ||
+                                                                    _globalController
+                                                                            .value >=
+                                                                        0.5
+                                                                ? 1.0
+                                                                : 0.7,
+                                                            duration:
+                                                                const Duration(
+                                                                    milliseconds:
+                                                                        500),
+                                                            curve: isPlaying ||
+                                                                    _globalController
+                                                                            .value >
+                                                                        0
+                                                                ? Cubic(
                                                                     0.68,
                                                                     -0.55,
                                                                     0.265,
-                                                                    1.55),
-                                                                child:
-                                                                    AspectRatio(
-                                                                  aspectRatio:
-                                                                      1.0,
-                                                                  child:
-                                                                      AnimatedContainer(
-                                                                    duration: const Duration(
+                                                                    1.55)
+                                                                : Curves
+                                                                    .easeInOut,
+                                                            child: AspectRatio(
+                                                              aspectRatio: 1.0,
+                                                              child:
+                                                                  AnimatedContainer(
+                                                                duration:
+                                                                    const Duration(
                                                                         milliseconds:
                                                                             300),
-                                                                    curve: Curves
-                                                                        .easeInOut,
-                                                                    height: 380,
-                                                                    decoration:
-                                                                        BoxDecoration(
+                                                                curve: Curves
+                                                                    .easeInOut,
+                                                                height: 380,
+                                                                decoration:
+                                                                    BoxDecoration(
+                                                                  color: Colors
+                                                                      .black,
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
+                                                                              8.0),
+                                                                  boxShadow: [
+                                                                    BoxShadow(
                                                                       color: Colors
-                                                                          .black,
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
-                                                                              8.0),
-                                                                      boxShadow: [
-                                                                        BoxShadow(
-                                                                          color: Colors
-                                                                              .black
-                                                                              .withAlpha((255 * 0.5).toInt()),
-                                                                          blurRadius:
-                                                                              20,
-                                                                          spreadRadius:
-                                                                              5,
-                                                                        ),
-                                                                      ],
+                                                                          .black
+                                                                          .withAlpha(
+                                                                              (255 * 0.5).toInt()),
+                                                                      blurRadius:
+                                                                          20,
+                                                                      spreadRadius:
+                                                                          5,
                                                                     ),
-                                                                    child:
-                                                                        ClipRRect(
-                                                                      borderRadius:
-                                                                          BorderRadius.circular(
+                                                                  ],
+                                                                ),
+                                                                child:
+                                                                    ClipRRect(
+                                                                  borderRadius:
+                                                                      BorderRadius
+                                                                          .circular(
                                                                               8.0),
-                                                                      child:
-                                                                          CachedNetworkImage(
-                                                                        fit: BoxFit
-                                                                            .cover,
-                                                                        imageUrl:
-                                                                            '${ApiService.baseUrl}/storage/cover/track/${nowPlaying?.id}',
-                                                                        progressIndicatorBuilder: (context,
+                                                                  child:
+                                                                      CachedNetworkImage(
+                                                                    fit: BoxFit
+                                                                        .cover,
+                                                                    imageUrl:
+                                                                        '${ApiService.baseUrl}/storage/cover/track/${nowPlaying?.id}',
+                                                                    progressIndicatorBuilder:
+                                                                        (context,
                                                                             url,
                                                                             downloadProgress) {
-                                                                          if (downloadProgress.progress ==
-                                                                              null) {
-                                                                            return Shimmer.fromColors(
-                                                                              baseColor: Colors.grey[800]!,
-                                                                              highlightColor: Colors.grey[600]!,
-                                                                              child: Container(
-                                                                                width: double.infinity,
-                                                                                height: double.infinity,
-                                                                                color: Colors.black,
-                                                                              ),
-                                                                            );
-                                                                          }
-                                                                          return Container();
-                                                                        },
-                                                                        errorWidget: (context,
+                                                                      if (downloadProgress
+                                                                              .progress ==
+                                                                          null) {
+                                                                        return Shimmer
+                                                                            .fromColors(
+                                                                          baseColor:
+                                                                              Colors.grey[800]!,
+                                                                          highlightColor:
+                                                                              Colors.grey[600]!,
+                                                                          child:
+                                                                              Container(
+                                                                            width:
+                                                                                double.infinity,
+                                                                            height:
+                                                                                double.infinity,
+                                                                            color:
+                                                                                Colors.black,
+                                                                          ),
+                                                                        );
+                                                                      }
+                                                                      return Container();
+                                                                    },
+                                                                    errorWidget:
+                                                                        (context,
                                                                             url,
                                                                             error) {
-                                                                          return Container(
+                                                                      return Container(
+                                                                        color: Colors
+                                                                            .black
+                                                                            .withAlpha((255 * 0.5).toInt()),
+                                                                        child:
+                                                                            Center(
+                                                                          child:
+                                                                              Icon(
+                                                                            Icons.music_note,
                                                                             color:
-                                                                                Colors.black.withAlpha((255 * 0.5).toInt()),
-                                                                            child:
-                                                                                Center(
-                                                                              child: Icon(
-                                                                                Icons.music_note,
-                                                                                color: Colors.white,
-                                                                                size: 86,
-                                                                              ),
-                                                                            ),
-                                                                          );
-                                                                        },
-                                                                      ),
-                                                                    ),
+                                                                                Colors.white,
+                                                                            size:
+                                                                                86,
+                                                                          ),
+                                                                        ),
+                                                                      );
+                                                                    },
                                                                   ),
                                                                 ),
                                                               ),
                                                             ),
-                                                          );
-                                                        },
-                                                      ),
-                                                    ),
-                                                  );
-                                                },
-                                              ),
+                                                          ),
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                );
+                                              },
                                             ),
                                             // top now playing
                                             Padding(
-                                              padding:
-                                                  const EdgeInsets.all(5),
-                                              child: Column(children: [
-                                                AnimatedBuilder(
-                                                  animation:
-                                                      _globalController,
-                                                  builder:
-                                                      (BuildContext context,
-                                                          Widget? child) {
-                                                    return Transform
-                                                        .translate(
-                                                      offset: Offset(
-                                                          0,
-                                                          100 +
-                                                              (10 *
-                                                                  _mainTransform
-                                                                      .value)),
-                                                      child: Row(
-                                                        children: [
-                                                          Opacity(
-                                                            opacity: 1 -
-                                                                _mainOpacity
-                                                                    .value,
-                                                            child: ClipRRect(
-                                                              borderRadius:
-                                                                  BorderRadius
-                                                                      .circular(
-                                                                          8.0),
-                                                              child:
-                                                                  CachedNetworkImage(
-                                                                height: 55,
-                                                                width: 55,
-                                                                imageUrl:
-                                                                    '${ApiService.baseUrl}/storage/cover/track/${nowPlaying?.id}',
-                                                                progressIndicatorBuilder:
-                                                                    (context,
-                                                                        url,
-                                                                        downloadProgress) {
-                                                                  if (downloadProgress
-                                                                          .progress ==
-                                                                      null) {
-                                                                    return Shimmer
-                                                                        .fromColors(
-                                                                      baseColor:
-                                                                          Colors.grey[800]!,
-                                                                      highlightColor:
-                                                                          Colors.grey[600]!,
-                                                                      child:
-                                                                          Container(
-                                                                        width:
-                                                                            double.infinity,
-                                                                        height:
-                                                                            double.infinity,
-                                                                        color:
-                                                                            Colors.black,
+                                              padding: const EdgeInsets.only(
+                                                  bottom: 5,
+                                                  left: 5,
+                                                  right: 5,
+                                                  top: 5),
+                                              child: Column(
+                                                children: [
+                                                  AnimatedBuilder(
+                                                    animation:
+                                                        _globalController,
+                                                    builder:
+                                                        (BuildContext context,
+                                                            Widget? child) {
+                                                      return Transform
+                                                          .translate(
+                                                        offset: Offset(
+                                                            0,
+                                                            100 +
+                                                                (10 *
+                                                                    _mainTransform
+                                                                        .value)),
+                                                        child: Row(
+                                                          children: [
+                                                            const SizedBox(
+                                                                width: 65,
+                                                                height: 55),
+                                                            // content
+                                                            Expanded(
+                                                              child: Opacity(
+                                                                opacity: 1 -
+                                                                    _mainOpacity
+                                                                        .value,
+                                                                child: Column(
+                                                                  children: [
+                                                                    ConditionalMarqueeText(
+                                                                      text: nowPlaying
+                                                                              ?.title ??
+                                                                          'No track playing',
+                                                                      containerWidth:
+                                                                          250,
+                                                                      style:
+                                                                          const TextStyle(
+                                                                        color: CupertinoColors
+                                                                            .white,
+                                                                        fontWeight:
+                                                                            FontWeight.w600,
+                                                                        fontSize:
+                                                                            18,
                                                                       ),
-                                                                    );
-                                                                  }
-                                                                  return Container();
-                                                                },
-                                                                errorWidget:
-                                                                    (context,
-                                                                        url,
-                                                                        error) {
-                                                                  return Container(
-                                                                    color: Colors
-                                                                        .black
-                                                                        .withAlpha(
-                                                                            (255 * 0.5).toInt()),
-                                                                    child:
-                                                                        Center(
-                                                                      child:
-                                                                          Icon(
-                                                                        Icons
-                                                                            .music_note,
-                                                                        color:
-                                                                            Colors.white,
-                                                                        size:
-                                                                            86,
-                                                                      ),
+                                                                      height:
+                                                                          23,
                                                                     ),
-                                                                  );
-                                                                },
+                                                                    ConditionalMarqueeText(
+                                                                      text: nowPlaying
+                                                                              ?.artist ??
+                                                                          'No artist',
+                                                                      containerWidth:
+                                                                          250,
+                                                                      style:
+                                                                          const TextStyle(
+                                                                        color: CupertinoColors
+                                                                            .systemGrey,
+                                                                        fontSize:
+                                                                            16,
+                                                                      ),
+                                                                      height:
+                                                                          23,
+                                                                    ),
+                                                                  ],
+                                                                ),
                                                               ),
                                                             ),
-                                                          ),
-                                                          const SizedBox(
-                                                              width: 10),
-                                                          Opacity(
-                                                            opacity: 1 -
-                                                                _mainOpacity
-                                                                    .value,
-                                                            child: Column(
-                                                              children: [
-                                                                ConditionalMarqueeText(
-                                                                  text: nowPlaying
-                                                                          ?.title ??
-                                                                      'No track playing',
-                                                                  containerWidth:
-                                                                      250,
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: CupertinoColors
-                                                                        .white,
-                                                                    fontWeight:
-                                                                        FontWeight
-                                                                            .w600,
-                                                                    fontSize:
-                                                                        18,
-                                                                  ),
-                                                                  height: 23,
+                                                            // like button
+                                                            Opacity(
+                                                              opacity: 1 -
+                                                                  _mainOpacity
+                                                                      .value,
+                                                              child:
+                                                                  CupertinoButton(
+                                                                padding:
+                                                                    EdgeInsets
+                                                                        .zero,
+                                                                onPressed:
+                                                                    nowPlaying ==
+                                                                            null
+                                                                        ? null
+                                                                        : () {
+                                                                            setState(() =>
+                                                                                isLiked = !isLiked);
+                                                                          },
+                                                                child: Icon(
+                                                                  isLiked
+                                                                      ? CupertinoIcons
+                                                                          .heart_fill
+                                                                      : CupertinoIcons
+                                                                          .heart,
+                                                                  size: 30,
+                                                                  color: isLiked
+                                                                      ? Colors
+                                                                          .red
+                                                                      : Colors
+                                                                          .white,
                                                                 ),
-                                                                ConditionalMarqueeText(
-                                                                  text: nowPlaying
-                                                                          ?.artist ??
-                                                                      'No artist',
-                                                                  containerWidth:
-                                                                      250,
-                                                                  style:
-                                                                      const TextStyle(
-                                                                    color: CupertinoColors
-                                                                        .systemGrey,
-                                                                    fontSize:
-                                                                        16,
-                                                                  ),
-                                                                  height: 23,
-                                                                ),
-                                                              ],
-                                                            ),
-                                                          ),
-                                                          Opacity(
-                                                            opacity: 1 -
-                                                                _mainOpacity
-                                                                    .value,
-                                                            child:
-                                                                CupertinoButton(
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                              onPressed:
-                                                                  nowPlaying ==
-                                                                          null
-                                                                      ? null
-                                                                      : () {
-                                                                          setState(() =>
-                                                                              isLiked = !isLiked);
-                                                                        },
-                                                              child: Icon(
-                                                                isLiked
-                                                                    ? CupertinoIcons
-                                                                        .heart_fill
-                                                                    : CupertinoIcons
-                                                                        .heart,
-                                                                size: 30,
-                                                                color: isLiked
-                                                                    ? Colors
-                                                                        .red
-                                                                    : Colors
-                                                                        .white,
                                                               ),
                                                             ),
-                                                          ),
-                                                        ],
-                                                      ),
-                                                    );
-                                                  },
-                                                ),
-                                              ]),
+                                                          ],
+                                                        ),
+                                                      );
+                                                    },
+                                                  ),
+                                                ],
+                                              ),
                                             ),
                                             // bottom now playing
                                             AnimatedBuilder(
@@ -531,37 +518,37 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                                   .value),
                                                       child: Opacity(
                                                         opacity:
-                                                        _mainOpacity.value,
+                                                            _mainOpacity.value,
                                                         child: Row(
                                                           mainAxisAlignment:
-                                                          MainAxisAlignment
-                                                              .spaceBetween,
+                                                              MainAxisAlignment
+                                                                  .spaceBetween,
                                                           children: [
                                                             Expanded(
                                                               child: Column(
                                                                 crossAxisAlignment:
-                                                                CrossAxisAlignment
-                                                                    .start,
+                                                                    CrossAxisAlignment
+                                                                        .start,
                                                                 children: [
                                                                   ConditionalMarqueeText(
                                                                     text: nowPlaying
-                                                                        ?.title ??
+                                                                            ?.title ??
                                                                         'No track playing',
                                                                     containerWidth:
-                                                                    300,
+                                                                        300,
                                                                   ),
                                                                   ConditionalMarqueeText(
                                                                     text: nowPlaying
-                                                                        ?.artist ??
+                                                                            ?.artist ??
                                                                         'No artist',
                                                                     containerWidth:
-                                                                    300,
+                                                                        300,
                                                                     style:
-                                                                    const TextStyle(
+                                                                        const TextStyle(
                                                                       color: CupertinoColors
                                                                           .systemGrey,
                                                                       fontSize:
-                                                                      18,
+                                                                          18,
                                                                     ),
                                                                   ),
                                                                 ],
@@ -569,27 +556,30 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                             ),
                                                             CupertinoButton(
                                                               padding:
-                                                              EdgeInsets
-                                                                  .zero,
-                                                              onPressed:
-                                                              nowPlaying ==
-                                                                  null || _globalController.value > 0
+                                                                  EdgeInsets
+                                                                      .zero,
+                                                              onPressed: nowPlaying ==
+                                                                          null ||
+                                                                      _globalController
+                                                                              .value >
+                                                                          0
                                                                   ? null
                                                                   : () {
-                                                                setState(() =>
-                                                                isLiked = !isLiked);
-                                                              },
+                                                                      setState(() =>
+                                                                          isLiked =
+                                                                              !isLiked);
+                                                                    },
                                                               child: Icon(
                                                                 isLiked
                                                                     ? CupertinoIcons
-                                                                    .heart_fill
+                                                                        .heart_fill
                                                                     : CupertinoIcons
-                                                                    .heart,
+                                                                        .heart,
                                                                 size: 30,
                                                                 color: isLiked
                                                                     ? Colors.red
                                                                     : Colors
-                                                                    .white,
+                                                                        .white,
                                                               ),
                                                             ),
                                                           ],
@@ -599,72 +589,207 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                               },
                                             ),
                                             // queue page
-                                            AnimatedBuilder(
-                                                animation: _queueController,
-                                                builder: (ctx, widget) {
-                                                  return Positioned.fill(
-                                                    child: Padding(
-                                                      padding:
-                                                          const EdgeInsets.only(
-                                                              top: 70),
-                                                      child: Column(
-                                                        children: [
-                                                          Transform.translate(
-                                                              offset: Offset(
-                                                                  _mainTransform
-                                                                      .value,
-                                                                  0),
-                                                              child: Opacity(
-                                                                opacity:
-                                                                    1 - _mainOpacity
-                                                                        .value,
-                                                                child: SizedBox(
-                                                                  height: 30,
-                                                                  child: Text(
-                                                                    "Queue (${audioState.playlist?.length ?? 0})",
-                                                                    style:
-                                                                        TextStyle(
-                                                                      color: Colors
-                                                                          .white,
-                                                                      fontSize:
-                                                                          20,
-                                                                      fontWeight:
-                                                                          FontWeight
-                                                                              .w600,
-                                                                    ),
-                                                                  ),
-                                                                ),
-                                                              ),
-                                                          ),
-                                                          Expanded(
-                                                                child: Padding(
-                                                                  padding: const EdgeInsets.only(left: 0),
-                                                                  child: Transform.translate(
-                                                                    offset: Offset(0,
-                                                                        50 + 5 * _mainTransform
-                                                                            .value),
-                                                                    child: Opacity(
-                                                                      opacity:
-                                                                      1 - _mainOpacity
-                                                                          .value,
-                                                                      child: AnimatedList(
-                                                                        key: _listKey,
-                                                                        initialItemCount: audioState.playlist?.length ?? 0,
-                                                                        itemBuilder: (context, index, animation) {
-                                                                          final item0 = audioState.playlist![index] as ProgressiveAudioSource?;
-                                                                          final item = item0?.tag as MediaItem?;
-                                                                          return buildListTile(item, index);
+                                            ValueListenableBuilder(
+                                              valueListenable: _currentPage,
+                                              builder: (ctx, value, child) {
+                                                return AnimatedBuilder(
+                                                  animation: _queueController,
+                                                  builder: (ctx, child) {
+                                                    return Positioned.fill(
+                                                      child: Padding(
+                                                        padding:
+                                                        const EdgeInsets.only(
+                                                            top: 70),
+                                                        child: Column(
+                                                          children: [
+                                                            Expanded(
+                                                              child: Padding(
+                                                                padding:
+                                                                const EdgeInsets
+                                                                    .only(
+                                                                    left: 0),
+                                                                child: Transform
+                                                                    .translate(
+                                                                  offset: Offset(
+                                                                      0,
+                                                                      50 +
+                                                                          5 *
+                                                                              _mainTransform
+                                                                                  .value),
+                                                                  child: Opacity(
+                                                                    opacity: _queueController.value,
+                                                                    child:
+                                                                    IgnorePointer(
+                                                                      ignoring: _currentPage.value != 1,
+                                                                      child:
+                                                                      StreamBuilder(
+                                                                        stream: Rx
+                                                                            .combineLatest2(
+                                                                          audioState
+                                                                              .player
+                                                                              .sequenceStateStream,
+                                                                          audioState
+                                                                              .player
+                                                                              .currentIndexStream,
+                                                                              (sequenceState,
+                                                                              currentIndex) =>
+                                                                          {
+                                                                            "sequence":
+                                                                            sequenceState,
+                                                                            "index":
+                                                                            currentIndex,
+                                                                          },
+                                                                        ),
+                                                                        builder:
+                                                                            (context,
+                                                                            snapshot) {
+                                                                          if (!snapshot
+                                                                              .hasData) {
+                                                                            return Container();
+                                                                          }
+
+                                                                          final sequenceState =
+                                                                          snapshot.data!["sequence"]
+                                                                          as SequenceState?;
+                                                                          final currentIndex =
+                                                                          snapshot.data!["index"]
+                                                                          as int?;
+
+                                                                          final playlist =
+                                                                              sequenceState?.effectiveSequence ??
+                                                                                  [];
+                                                                          if (playlist
+                                                                              .isEmpty) {
+                                                                            return Container();
+                                                                          }
+
+                                                                          final previousSongs = currentIndex != null &&
+                                                                              currentIndex >
+                                                                                  0
+                                                                              ? playlist.sublist(
+                                                                              0,
+                                                                              currentIndex)
+                                                                              : [];
+                                                                          final nextSongs = currentIndex != null &&
+                                                                              currentIndex + 1 < playlist.length
+                                                                              ? playlist.sublist(currentIndex + 1)
+                                                                              : [];
+
+                                                                          return CustomScrollView(
+                                                                            shrinkWrap:
+                                                                            true,
+                                                                            physics:
+                                                                            const BouncingScrollPhysics(),
+                                                                            slivers: [
+                                                                              if (previousSongs
+                                                                                  .isNotEmpty) ...[
+                                                                                const SliverPadding(
+                                                                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                                                  sliver: SliverToBoxAdapter(
+                                                                                    child: Text(
+                                                                                      "Previous Songs",
+                                                                                      style: TextStyle(
+                                                                                        fontSize: 18,
+                                                                                        fontWeight: FontWeight.bold,
+                                                                                        color: CupertinoColors.systemGrey,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                                SliverList(
+                                                                                  delegate: SliverChildBuilderDelegate(
+                                                                                        (context, index) {
+                                                                                      final item = previousSongs[index].tag as MediaItem?;
+                                                                                      return FadeTransition(
+                                                                                        opacity: AlwaysStoppedAnimation(0.7),
+                                                                                        child: buildListTile(item, index),
+                                                                                      );
+                                                                                    },
+                                                                                    childCount: previousSongs.length,
+                                                                                  ),
+                                                                                ),
+                                                                              ],
+                                                                              if (nextSongs
+                                                                                  .isNotEmpty) ...[
+                                                                                const SliverPadding(
+                                                                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                                                  sliver: SliverToBoxAdapter(
+                                                                                    child: Text(
+                                                                                      "Next Songs",
+                                                                                      style: TextStyle(
+                                                                                        fontSize: 18,
+                                                                                        fontWeight: FontWeight.bold,
+                                                                                        color: CupertinoColors.white,
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                ),
+                                                                                SliverList(
+                                                                                  delegate: SliverChildBuilderDelegate(
+                                                                                        (context, index) {
+                                                                                      final item = nextSongs[index].tag as MediaItem?;
+                                                                                      return SlideTransition(
+                                                                                        position: AlwaysStoppedAnimation(Offset.zero),
+                                                                                        child: buildListTile(item, index + previousSongs.length + 1),
+                                                                                      );
+                                                                                    },
+                                                                                    childCount: nextSongs.length,
+                                                                                  ),
+                                                                                ),
+                                                                              ],
+                                                                            ],
+                                                                          );
                                                                         },
                                                                       ),
                                                                     ),
                                                                   ),
-                                                                )
-                                                          ),
-                                                        ],
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ],
+                                                        ),
                                                       ),
+                                                    );
+                                                  },
+                                                );
+                                              }
+                                            ),
+                                            // lyrics
+                                            AnimatedBuilder(
+                                              animation: _lyricsController,
+                                              builder: (ctx, child) {
+                                                return Positioned.fill(
+                                                  child: Padding(
+                                                    padding: const EdgeInsets.only(top: 70),
+                                                    child: Column(
+                                                      children: [
+                                                        Expanded(
+                                                          child: Padding(
+                                                            padding: const EdgeInsets.only(left: 0),
+                                                            child: Transform.translate(
+                                                              offset: Offset(0, 50 + 5 * _mainTransform.value),
+                                                              child: Center(
+                                                                child: Opacity(
+                                                                  opacity: _lyricsController.value, // Fade in effect
+                                                                  child: Text(
+                                                                    "Lyrics feature not ready",
+                                                                    style: TextStyle(
+                                                                      fontSize: 20,
+                                                                      fontWeight: FontWeight.bold,
+                                                                      color: Colors.white.withOpacity(0.8),
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                            ),
+                                                          ),
+                                                        ),
+                                                      ],
                                                     ),
-                                                  );
-                                                }),
+                                                  ),
+                                                );
+                                              },
+                                            ),
                                           ],
                                         ),
                                       ),
@@ -838,16 +963,23 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                         audioState.player
                                                                     .loopMode ==
                                                                 LoopMode.one
-                                                            ? LoopMode.off
-                                                            : LoopMode.one,
+                                                            ? LoopMode.all
+                                                            : audioState.player
+                                                                        .loopMode ==
+                                                                    LoopMode.all
+                                                                ? LoopMode.off
+                                                                : LoopMode.one,
                                                       );
                                                     },
                                               child: Icon(
-                                                CupertinoIcons.repeat,
+                                                audioState.player.loopMode ==
+                                                        LoopMode.one
+                                                    ? CupertinoIcons.repeat_1
+                                                    : CupertinoIcons.repeat,
                                                 size: 28,
                                                 color: audioState
-                                                            .player.loopMode ==
-                                                        LoopMode.one
+                                                            .player.loopMode !=
+                                                        LoopMode.off
                                                     ? Colors.blue
                                                     : Colors.white,
                                               ),
@@ -874,48 +1006,77 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                           },
                                         ),
                                         ValueListenableBuilder(
-                                            valueListenable: _currentPage,
-                                            builder: (ctx, value, child) {
-                                              return Row(children: [
+                                          valueListenable: _currentPage,
+                                          builder: (ctx, value, child) {
+                                            return Row(
+                                              mainAxisAlignment:
+                                                  MainAxisAlignment.spaceEvenly,
+                                              children: [
                                                 CupertinoButton(
-                                                    child: Container(
-                                                      decoration: BoxDecoration(
-                                                        borderRadius:
-                                                            BorderRadius
-                                                                .circular(5),
-                                                        color: Colors.white
-                                                            .withAlpha(_currentPage
-                                                                        .value ==
-                                                                    1
-                                                                ? 30
-                                                                : 0),
-                                                      ),
-                                                      padding:
-                                                          const EdgeInsets.all(
-                                                              8),
-                                                      child: Icon(
-                                                        CupertinoIcons
-                                                            .list_bullet,
-                                                        color: _currentPage
-                                                                    .value ==
-                                                                1
-                                                            ? Colors.red
-                                                            : Colors.white
-                                                                .withAlpha(150),
-                                                        size: 28,
-                                                      ),
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              5),
+                                                      color: Colors.white
+                                                          .withAlpha(_currentPage
+                                                                      .value ==
+                                                                  1
+                                                              ? 30
+                                                              : 0),
                                                     ),
-                                                    onPressed: () {
-                                                      var active =
-                                                          _currentPage.value ==
-                                                              1;
-                                                      _currentPage.value =
-                                                          active ? 0 : 1;
-                                                      setPage(
-                                                          _currentPage.value);
-                                                    })
-                                              ]);
-                                            }),
+                                                    padding:
+                                                        const EdgeInsets.all(8),
+                                                    child: Icon(
+                                                      CupertinoIcons
+                                                          .list_bullet,
+                                                      color: _currentPage
+                                                                  .value ==
+                                                              1
+                                                          ? Colors.red
+                                                          : Colors.white
+                                                              .withAlpha(150),
+                                                      size: 28,
+                                                    ),
+                                                  ),
+                                                  onPressed: () {
+                                                    setPage(1);
+                                                  },
+                                                ),
+                                                CupertinoButton(
+                                                  child: Container(
+                                                    decoration: BoxDecoration(
+                                                      borderRadius:
+                                                          BorderRadius.circular(
+                                                              5),
+                                                      color: Colors.white
+                                                          .withAlpha(_currentPage
+                                                                      .value ==
+                                                                  2
+                                                              ? 30
+                                                              : 0),
+                                                    ),
+                                                    padding:
+                                                        const EdgeInsets.all(8),
+                                                    child: Icon(
+                                                      CupertinoIcons.music_mic,
+                                                      color: _currentPage
+                                                                  .value ==
+                                                              2
+                                                          ? Colors.red
+                                                          : Colors.white
+                                                              .withAlpha(150),
+                                                      size: 28,
+                                                    ),
+                                                  ),
+                                                  onPressed: () {
+                                                    setPage(2);
+                                                  },
+                                                ),
+                                              ],
+                                            );
+                                          },
+                                        ),
                                       ],
                                     ),
                                   ),
