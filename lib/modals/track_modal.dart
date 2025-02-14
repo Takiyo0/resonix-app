@@ -1,6 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:resonix/modals/playlists_modal.dart';
 import 'package:resonix/pages/album.dart';
+import 'package:resonix/pages/user.dart';
 import 'package:resonix/services/api_service.dart';
 import 'package:resonix/state/audio_state.dart';
 import 'package:resonix/widgets/custom_image.dart';
@@ -148,7 +149,8 @@ class TrackModal {
                           icon: Icons.queue_music,
                           title: "Add to queue",
                           onTap: () => audioState.addTracks(
-                              [audioState.buildTrack(track, "Recommendation")], false),
+                              [audioState.buildTrack(track, "Recommendation")],
+                              false),
                         ),
                       if (actions.contains(TrackModalAction.playlistAdd) ||
                           actions.contains(TrackModalAction.playlistRemove))
@@ -188,13 +190,30 @@ class TrackModal {
                         ),
                       if (track["artists"] != null &&
                           actions.contains(TrackModalAction.artist))
-                        ...track["artists"].take(3).map(
-                              (artist) => _buildOptionTile(
-                                icon: Icons.person,
-                                title: "Go to $artist",
-                                onTap: () {},
-                              ),
-                            ),
+                        ...track["artists"].asMap().entries.take(3).map(
+                          (entry) {
+                            int index = entry.key;
+                            String artist = entry.value;
+
+                            return _buildOptionTile(
+                              icon: Icons.person,
+                              title: "Go to $artist",
+                              onTap: () async {
+                                Navigator.pop(context);
+                                await Future.delayed(
+                                    const Duration(milliseconds: 400));
+                                if (!currentContext.mounted) return;
+                                Navigator.of(currentContext).push(
+                                  CupertinoPageRoute(
+                                    builder: (ctx) => UserPage(
+                                      id: track["artistids"]?[index],
+                                    ),
+                                  ),
+                                );
+                              },
+                            );
+                          },
+                        ),
                     ],
                   ),
                 ],
