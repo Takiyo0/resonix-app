@@ -791,11 +791,14 @@ class ApiService {
   }
 
   static Future<Map<String, dynamic>?> search(String query) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
     try {
       var response = await _dio.get(
         '/search',
         queryParameters: {"query": query},
-        options: Options(headers: {"Content-Type": "application/json"}),
+        options: Options(headers: {"Authorization": "Bearer $token"}),
       );
 
       if (response.statusCode == 200) {
