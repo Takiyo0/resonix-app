@@ -53,6 +53,7 @@ dependencies:
   marquee: ^2.3.0
   haptic_feedback: ^0.5.1+1
   flutter_launcher_icons: ^0.14.3
+  intl: ^0.20.2
 
 dev_dependencies:
   flutter_test:
