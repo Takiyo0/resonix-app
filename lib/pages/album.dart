@@ -307,7 +307,7 @@ class AlbumPageState extends State<AlbumPage> {
                                                         const SizedBox(
                                                             width: 4),
                                                         Text(
-                                                          "${data?["likedCount"]} users",
+                                                          "${data?["likedCount"] ?? 0} users",
                                                           style: TextStyle(
                                                               fontSize: 12,
                                                               color: Colors
