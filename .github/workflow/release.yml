@@ -1,0 +1,119 @@
+name: Build and Release Resonix
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  build-android:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.27.4
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Auto-increment version
+        run: |
+          VERSION=$(grep 'version:' pubspec.yaml | cut -d ' ' -f 2)
+          BUILD_NUM=$(git rev-list --count HEAD)
+          NEW_VERSION="${VERSION%+*}+$BUILD_NUM"
+          sed -i "s/version: .*/version: $NEW_VERSION/" pubspec.yaml
+          echo "New Version: $NEW_VERSION"
+
+      - name: Build Android APK
+        run: flutter build apk --release
+
+      - name: Archive APK
+        run: |
+          mkdir -p artifacts/android
+          cp build/app/outputs/flutter-apk/app-release.apk artifacts/android/resonix.apk
+
+      - name: Upload APK as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: resonix-android
+          path: artifacts/android/resonix.apk
+
+  build-windows:
+    name: Build Windows Installer
+    runs-on: windows-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: 3.27.4
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Windows Executable
+        run: flutter build windows
+
+      - name: Install Inno Setup
+        run: choco install -y innosetup
+
+      - name: Debug Build Path
+        run: Get-ChildItem -Recurse build\windows\x64\runner\Release
+
+      - name: Compile Inno Setup Script
+        run: iscc /Q resonix.iss
+
+      - name: Debug Build Path
+        run: Get-ChildItem -Recurse build/windows/
+
+      - name: Archive Installer
+        run: |
+          mkdir -p artifacts/windows
+          cp build/windows/resonix_installer.exe artifacts/windows/resonix_installer.exe
+
+      - name: Upload Windows Installer as Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: resonix-windows
+          path: artifacts/windows/resonix_installer.exe
+
+  release:
+    name: Create GitHub Release
+    runs-on: ubuntu-latest
+    needs: [build-android, build-windows]
+
+    steps:
+      - name: Download Android APK
+        uses: actions/download-artifact@v4
+        with:
+          name: resonix-android
+          path: artifacts/android/
+
+      - name: Download Windows Installer
+        uses: actions/download-artifact@v4
+        with:
+          name: resonix-windows
+          path: artifacts/windows/
+
+      - name: Create GitHub Release
+        id: create_release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: v1.0.${{ github.run_number }}
+          name: Release v1.0.${{ github.run_number }}
+          draft: false
+          prerelease: false
+          files: |
+            artifacts/windows/resonix_installer.exe
+            artifacts/android/resonix.apk
+        env:
+          GITHUB_TOKEN: ${{ secrets.GH_PAT }}
