@@ -15,6 +15,7 @@ experience—completely yours, with no interruptions.
     * [🛠 **Tech Stack**](#-tech-stack)
     * [🚀 **Features (Planned & Implemented)**](#-features-planned--implemented)
     * [📸 **Screenshots / Preview**](#-screenshots--preview)
+    * [🎥 **Demo**](#-demo)
     * [📲 **How to Use**](#-how-to-use)
     * [📌 **Notes**](#-notes)
 
@@ -68,6 +69,12 @@ Here’s a preview of **Resonix in action**:
 |----------------------------------------------------------------|-------------------------------------------------------|
 | ![iOS Lock](screenshots/ios_lock_screen.webp)                  | ![Android Lock](screenshots/android_lock_screen.webp) |
 | ![Android Notification](screenshots/android_notification.webp) | ![Dynamic Island](screenshots/dynamic_island.webp)    |
+
+---
+
+## 🎥 **Demo**
+
+[![Demo](http://img.youtube.com/vi/JH8MDmD51RE/0.jpg)](https://www.youtube.com/embed/JH8MDmD51RE "Resonix App Demu")
 
 ---
 
