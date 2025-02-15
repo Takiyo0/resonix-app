@@ -1,21 +1,17 @@
 import 'package:cached_network_image/cached_network_image.dart';
 import 'package:flutter/cupertino.dart';
-import 'package:flutter_spinkit/flutter_spinkit.dart';
 import 'package:haptic_feedback/haptic_feedback.dart';
 import 'package:resonix/main.dart';
-import 'package:resonix/modals/album_modal.dart';
-import 'package:resonix/modals/track_modal.dart';
-import 'package:resonix/pages/album.dart';
+import 'package:resonix/pages/playlist.dart';
+import 'package:resonix/pages/user/followers.dart';
+import 'package:resonix/pages/user/following.dart';
 import 'package:resonix/services/api_service.dart';
-import 'package:resonix/services/helper.dart';
-import 'package:resonix/widgets/custom_image.dart';
 import 'package:resonix/widgets/skeleton_widget.dart';
-import 'package:intl/intl.dart';
 
 class UserPage extends StatefulWidget {
-  final dynamic id;
+  final String? id;
 
-  const UserPage({super.key, required this.id});
+  const UserPage({super.key, this.id});
 
   @override
   UserPageState createState() => UserPageState();
@@ -23,112 +19,66 @@ class UserPage extends StatefulWidget {
 
 class UserPageState extends State<UserPage> {
   dynamic data;
-  dynamic albums;
-  dynamic topTracks;
+  dynamic playlists;
 
   @override
   void initState() {
     super.initState();
     loadUser();
-    loadAlbums();
-    loadTopTracks();
+    loadPlaylists();
   }
 
   Future<void> loadUser() async {
-    var artist = await ApiService.getArtist(widget.id);
+    var user = await ApiService.getPublicUser(
+        widget.id == null || widget.id!.isEmpty ? "null" : widget.id!);
     if (!mounted) return;
-    if (artist != null) {
-      if (artist["error"] != null) {
-        return ApiService.returnError(context, artist["error"]);
+    if (user != null) {
+      if (user["error"] != null) {
+        return ApiService.returnError(context, user["error"]);
       }
       setState(() {
-        data = artist["artist"];
+        data = user["user"];
       });
     } else {
       await ApiService.returnTokenExpired(context);
     }
   }
 
-  Future<void> loadAlbums() async {
-    var albums = await ApiService.getArtistAlbums(widget.id);
+  Future<void> loadPlaylists() async {
+    var albums = await ApiService.getUserPlaylist(
+        widget.id == null || widget.id!.isEmpty ? "null" : widget.id!);
     if (!mounted) return;
     if (albums != null) {
       if (albums["error"] != null) {
         return ApiService.returnError(context, albums["error"]);
       }
       setState(() {
-        this.albums = albums["albums"];
+        playlists = albums["playlists"];
       });
     } else {
       await ApiService.returnTokenExpired(context);
     }
   }
 
-  Future<void> loadTopTracks() async {
-    var topTracks = await ApiService.getArtistTopTracks(widget.id);
-    if (!mounted) return;
-    if (topTracks != null) {
-      if (topTracks["error"] != null) {
-        return ApiService.returnError(context, topTracks["error"]);
-      }
-      setState(() {
-        this.topTracks = topTracks["tracks"];
-      });
-    } else {
-      await ApiService.returnTokenExpired(context);
-    }
-  }
-
-  void _handleTap(
-      BuildContext context, dynamic item, String type, AudioState audioState) {
+  void _handleTap(BuildContext context, dynamic item) {
     Haptics.vibrate(HapticsType.light);
-
-    if (type == "album") {
-      Navigator.of(context).push(
-        CupertinoPageRoute(builder: (ctx) => AlbumPage(id: item["id"])),
-      );
-    } else {
-      int index = topTracks.indexWhere((track) => track["id"] == item["id"]);
-      if (index == -1) index = 0;
-      var tracks = topTracks
-          .map((e) => audioState.buildTrack(
-              e, data?["nickname"] ?? data?["username"] ?? "Artist"))
-          .toList().cast<UriAudioSource>();
-      audioState.playAll(tracks, true, index);
-    }
+    Navigator.of(context).push(
+      CupertinoPageRoute(builder: (ctx) => PlaylistPage(id: item["id"])),
+    );
   }
 
-  void _handleLongPress(
-      BuildContext context, dynamic item, String type, AudioState audioState) {
+  void _handleLongPress(BuildContext context, dynamic item) {
     Haptics.vibrate(HapticsType.medium);
-    if (type == "album") {
-      AlbumModal.show(
-        context,
-        [AlbumModalAction.favorite, AlbumModalAction.artist],
-        item,
-        audioState,
-        null,
-        null,
-      );
-    } else {
-      TrackModal.show(
-          context,
-          [
-            TrackModalAction.favorite,
-            TrackModalAction.queue,
-            TrackModalAction.playlistAdd,
-            TrackModalAction.album,
-            TrackModalAction.artist
-          ],
-          item,
-          audioState,
-          null,
-          null);
-    }
+    // TODO: implement playlist long press modal
+  }
+
+  void logout() {
+    ApiService.logout(context);
   }
 
   void follow() async {
-    var response = await ApiService.followArtist(widget.id);
+    if (widget.id == null) return;
+    var response = await ApiService.followUser(widget.id!);
     if (!mounted) return;
     if (response != null) {
       if (response["error"] != null) {
@@ -162,8 +112,14 @@ class UserPageState extends State<UserPage> {
             child: Stack(
               children: [
                 Container(
-                  width: MediaQuery.of(context).size.width,
-                  height: MediaQuery.of(context).size.height,
+                  width: MediaQuery
+                      .of(context)
+                      .size
+                      .width,
+                  height: MediaQuery
+                      .of(context)
+                      .size
+                      .height,
                   padding: const EdgeInsets.only(top: 16, left: 16, right: 16),
                   decoration: BoxDecoration(
                     gradient: LinearGradient(
@@ -199,76 +155,117 @@ class UserPageState extends State<UserPage> {
                                   child: ClipOval(
                                     child: data == null
                                         ? SkeletonContainer(
-                                            width: 50,
-                                            height: 50,
-                                            shape: BoxShape.circle)
+                                        width: 50,
+                                        height: 50,
+                                        shape: BoxShape.circle)
                                         : (data["avatarid"] != null
-                                            ? Image.network(
-                                                '${ApiService.baseUrl}/storage/avatar/${data["avatarid"]}',
-                                                fit: BoxFit.cover,
-                                                errorBuilder: (context, error,
-                                                        stackTrace) =>
-                                                    Icon(
-                                                  Icons.person,
-                                                  color: Colors.white54,
-                                                  size: 30,
-                                                ),
-                                              )
-                                            : Icon(Icons.person,
-                                                color: Colors.white54,
-                                                size: 30)),
+                                        ? Image.network(
+                                      '${ApiService
+                                          .baseUrl}/storage/avatar/${data["avatarid"]}',
+                                      fit: BoxFit.cover,
+                                      errorBuilder: (context, error,
+                                          stackTrace) =>
+                                          Icon(
+                                            Icons.person,
+                                            color: Colors.white54,
+                                            size: 30,
+                                          ),
+                                    )
+                                        : Icon(Icons.person,
+                                        color: Colors.white54,
+                                        size: 30)),
                                   ),
                                 ),
                                 const SizedBox(width: 12),
-                                Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    data == null
-                                        ? SkeletonContainer(
-                                            width: 120, height: 20)
-                                        : Text(
-                                            data["nickname"] ??
-                                                data["username"] ??
-                                                "Unknown User",
-                                            style: const TextStyle(
-                                              color: Colors.white,
-                                              fontSize: 18,
-                                              fontWeight: FontWeight.bold,
+                                Expanded(
+                                  child: Column(
+                                    crossAxisAlignment:
+                                    CrossAxisAlignment.start,
+                                    children: [
+                                      data == null
+                                          ? SkeletonContainer(
+                                          width: 120, height: 20)
+                                          : Text(
+                                        data["nickname"] ??
+                                            data["username"] ??
+                                            "Unknown User",
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontSize: 18,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 6),
+                                      Row(
+                                        children: [
+                                          GestureDetector(
+                                            onTap: () {
+                                              Haptics.vibrate(
+                                                  HapticsType.light);
+                                              Navigator.of(context)
+                                                  .push(CupertinoPageRoute(
+                                                  builder: (ctx) =>
+                                                      UserFollowerPage(
+                                                          userId: data["id"],
+                                                          type: "user")));
+                                            },
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.group,
+                                                    size: 14,
+                                                    color: Colors.grey[400]),
+                                                const SizedBox(width: 4),
+                                                data == null
+                                                    ? SkeletonContainer(
+                                                    width: 40, height: 14)
+                                                    : Text(
+                                                  '${data["followercount"]} followers',
+                                                  style: TextStyle(
+                                                      color: Colors.grey[400],
+                                                      fontSize: 14),
+                                                ),
+                                              ],
                                             ),
                                           ),
-                                    const SizedBox(height: 6),
-                                    Row(
-                                      children: [
-                                        Icon(Icons.group,
-                                            size: 14, color: Colors.grey[400]),
-                                        const SizedBox(width: 4),
-                                        data == null
-                                            ? SkeletonContainer(
-                                                width: 40, height: 14)
-                                            : Text(
-                                                '${data["followercount"]} followers',
-                                                style: TextStyle(
-                                                    color: Colors.grey[400],
-                                                    fontSize: 14),
-                                              ),
-                                        const SizedBox(width: 12),
-                                        Icon(Icons.library_music,
-                                            size: 14, color: Colors.grey[400]),
-                                        const SizedBox(width: 4),
-                                        data == null
-                                            ? SkeletonContainer(
-                                                width: 40, height: 14)
-                                            : Text(
-                                                '${data["trackcount"]} tracks',
-                                                style: TextStyle(
-                                                    color: Colors.grey[400],
-                                                    fontSize: 14),
-                                              ),
-                                      ],
-                                    ),
-                                  ],
+                                          const SizedBox(width: 12),
+                                          GestureDetector(
+                                            onTap: () {
+                                              Haptics.vibrate(
+                                                  HapticsType.light);
+                                              Navigator.of(context)
+                                                  .push(CupertinoPageRoute(
+                                                  builder: (ctx) =>
+                                                      UserFollowingPage(
+                                                          userId: data["id"])));
+                                            },
+                                            child: Row(
+                                              children: [
+                                                Icon(Icons.group,
+                                                    size: 14,
+                                                    color: Colors.grey[400]),
+                                                const SizedBox(width: 4),
+                                                data == null
+                                                    ? SkeletonContainer(
+                                                    width: 40, height: 14)
+                                                    : Text(
+                                                  '${data["followingcount"]} following',
+                                                  style: TextStyle(
+                                                      color: Colors.grey[400],
+                                                      fontSize: 14),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ],
+                                  ),
                                 ),
-                                const Spacer(),
+                                (data?["isself"] == true ?? true) ? IconButton(
+                                  onPressed: () => logout(),
+                                  icon: Icon(Icons.logout,
+                                      color: Colors.white),
+                                ) :
                                 IconButton(
                                   onPressed: () => follow(),
                                   icon: Icon(
@@ -287,14 +284,10 @@ class UserPageState extends State<UserPage> {
                                 child: Column(
                                   crossAxisAlignment: CrossAxisAlignment.start,
                                   children: [
-                                    _sectionTitle("Albums"),
-                                    albums == null
+                                    _sectionTitle("Playlists"),
+                                    playlists == null
                                         ? _buildSkeletonGrid()
-                                        : _buildAlbumGrid(context),
-                                    _sectionTitle("Top Tracks"),
-                                    topTracks == null
-                                        ? _buildSkeletonList()
-                                        : _buildTrackList(context),
+                                        : _buildPlaylistGrid(context),
                                     const SizedBox(height: 90),
                                   ],
                                 ),
@@ -317,20 +310,23 @@ class UserPageState extends State<UserPage> {
   Widget _sectionTitle(String title) {
     return Padding(
       padding: const EdgeInsets.symmetric(vertical: 12.0),
-      child: Text(
-        title,
-        style: TextStyle(
-            color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+      child: Row(
+        children: [
+          Text(
+            title,
+            style: TextStyle(
+                color: Colors.white, fontSize: 22, fontWeight: FontWeight.bold),
+          ),
+        ],
       ),
     );
   }
 
-  Widget _buildAlbumGrid(BuildContext context) {
-    final audioState = context.watch<AudioState>();
+  Widget _buildPlaylistGrid(BuildContext context) {
     return GridView.builder(
       shrinkWrap: true,
       physics: NeverScrollableScrollPhysics(),
-      itemCount: albums.length,
+      itemCount: playlists.length,
       gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 2,
         crossAxisSpacing: 12,
@@ -338,11 +334,11 @@ class UserPageState extends State<UserPage> {
         childAspectRatio: 1,
       ),
       itemBuilder: (context, index) {
-        var album = albums[index];
+        var album = playlists[index];
         return GestureDetector(
-          onTap: () => _handleTap(context, album, "album", audioState),
+          onTap: () => _handleTap(context, album),
           onLongPress: () =>
-              _handleLongPress(context, album, "album", audioState),
+              _handleLongPress(context, album),
           child: Container(
             decoration: BoxDecoration(
               color: Colors.grey[900],
@@ -359,7 +355,8 @@ class UserPageState extends State<UserPage> {
                 children: [
                   CachedNetworkImage(
                     imageUrl:
-                        '${ApiService.baseUrl}/storage/cover/album/${album["id"]}',
+                    '${ApiService
+                        .baseUrl}/storage/cover/playlist/${album["id"]}',
                     width: double.infinity,
                     height: double.infinity,
                     fit: BoxFit.cover,
@@ -415,117 +412,6 @@ class UserPageState extends State<UserPage> {
     );
   }
 
-  Widget _buildTrackList(BuildContext context) {
-    final audioState = context.watch<AudioState>();
-    return ListView.separated(
-      shrinkWrap: true,
-      physics: NeverScrollableScrollPhysics(),
-      itemCount: topTracks.length,
-      separatorBuilder: (_, __) => SizedBox(height: 12),
-      itemBuilder: (context, index) {
-        var track = topTracks[index];
-
-        return StreamBuilder(
-            stream: audioState.player.sequenceStateStream,
-            builder: (ctx, snapshot) {
-              final nowPlaying =
-                  snapshot.data?.currentSource?.tag as MediaItem?;
-              final isThis = nowPlaying?.id == track["id"];
-              return GestureDetector(
-                onTap: () => isThis
-                    ? null
-                    : _handleTap(context, track, "track", audioState),
-                onLongPress: () =>
-                    _handleLongPress(context, track, "track", audioState),
-                child: Container(
-                  padding: EdgeInsets.all(12),
-                  decoration: BoxDecoration(
-                    color: Color(0xFF28123E),
-                    borderRadius: BorderRadius.circular(12),
-                    boxShadow: [
-                      BoxShadow(
-                          color: Colors.black.withAlpha((255 * 0.3).toInt()),
-                          blurRadius: 4)
-                    ],
-                  ),
-                  child: Row(
-                    children: [
-                      ClipRRect(
-                        borderRadius: BorderRadius.circular(8),
-                        child: CustomImage(
-                          imageUrl:
-                              '${ApiService.baseUrl}/storage/cover/track/${track["id"]}',
-                          height: 60,
-                          width: 60,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Row(
-                              children: [
-                                Expanded(
-                                  child: Text(track["name"],
-                                      maxLines: 1,
-                                      overflow: TextOverflow.ellipsis,
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
-                                          fontSize: 16)),
-                                ),
-                                if (track["explicit"] == true) ...[
-                                  const SizedBox(width: 6),
-                                  Icon(Icons.explicit,
-                                      color: Colors.red, size: 18),
-                                ],
-                              ],
-                            ),
-                            Text(track["artists"].join(", "),
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: TextStyle(
-                                    color: Colors.grey[400], fontSize: 12)),
-                            Row(
-                              children: [
-                                Icon(Icons.access_time,
-                                    size: 12, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Text(
-                                    Helper.formatDuration(
-                                        (track?["durationms"] ?? 0).round()),
-                                    style: TextStyle(
-                                        color: Colors.grey[400], fontSize: 12)),
-                                const SizedBox(width: 12),
-                                Icon(Icons.headset,
-                                    size: 12, color: Colors.grey),
-                                const SizedBox(width: 4),
-                                Text(
-                                  NumberFormat.compact()
-                                      .format(track["listencount"]),
-                                  style: TextStyle(
-                                      color: Colors.grey[400], fontSize: 12),
-                                ),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                      isThis ? SpinKitWave(
-                        color: Colors.green,
-                        size: 15.0,
-                        type: SpinKitWaveType.center,
-                      ) : Icon(Icons.more_vert, color: Colors.white70),
-                    ],
-                  ),
-                ),
-              );
-            });
-      },
-    );
-  }
-
   Widget _buildSkeletonGrid() {
     return GridView.builder(
       shrinkWrap: true,
@@ -539,13 +425,6 @@ class UserPageState extends State<UserPage> {
       ),
       itemBuilder: (context, index) =>
           _buildSkeletonItem(width: double.infinity, height: double.infinity),
-    );
-  }
-
-  Widget _buildSkeletonList() {
-    return Column(
-      children: List.generate(
-          5, (index) => _buildSkeletonItem(width: double.infinity, height: 60)),
     );
   }
 
