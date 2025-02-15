@@ -103,4 +103,4 @@ free time.
 🔹 Contributions & feedback are always welcome—feel free to fork the repo and submit PRs.  
 🔹 Future improvements may include **playlist support, better UI, and many more**.
 
-```
+---
