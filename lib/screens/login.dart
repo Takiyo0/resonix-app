@@ -1,8 +1,10 @@
+import 'dart:ui';
+
 import 'package:flutter/material.dart';
 import 'package:resonix/screens/home.dart';
 import 'package:resonix/screens/register.dart';
 import 'package:resonix/services/api_service.dart';
-import 'package:resonix/widgets/error.dart';
+import 'package:resonix/widgets/takiyo_input_form.dart';
 
 class Login extends StatefulWidget {
   const Login({super.key});
@@ -47,8 +49,7 @@ class _LoginState extends State<Login> {
     return GestureDetector(
         onTap: () => FocusScope.of(context).unfocus(),
         child: Scaffold(
-            body: Center(
-          child: Container(
+          body: Container(
             decoration: const BoxDecoration(
               gradient: LinearGradient(
                 begin: Alignment.topCenter,
@@ -59,166 +60,129 @@ class _LoginState extends State<Login> {
                   Color(0xFF150825),
                   Color(0xFF0B0512),
                 ],
-                stops: [0.0, 0.3, 0.7, 1.0],
               ),
             ),
-            child: Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Center(
-                  child: Container(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: ClipRRect(
+                  borderRadius: BorderRadius.circular(16.0),
+                  child: BackdropFilter(
+                    filter: ImageFilter.blur(sigmaX: 12.0, sigmaY: 12.0),
+                    child: Container(
                       padding: const EdgeInsets.all(32.0),
                       decoration: BoxDecoration(
-                          color: Colors.grey.withValues(alpha: .3),
-                          borderRadius: BorderRadius.circular(16.0)),
-                      child: Column(mainAxisSize: MainAxisSize.min, children: [
-                        Container(
-                          margin: EdgeInsets.only(bottom: 7.0),
-                          child: Image.asset('assets/fl_resonix_x512.png',
-                              width: 320),
-                        ),
-                        const Text(
-                          "Login",
-                          style: TextStyle(
-                              fontSize: 24.0,
+                        color: Colors.white.withOpacity(0.15),
+                        borderRadius: BorderRadius.circular(16.0),
+                        border:
+                            Border.all(color: Colors.white.withOpacity(0.2)),
+                      ),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Image.asset(
+                            'assets/fl_resonix_x512.png',
+                            width: 180,
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            "Welcome Back!",
+                            style: TextStyle(
+                              fontSize: 22,
                               fontWeight: FontWeight.bold,
-                              color: Colors.white),
-                        ),
-                        Visibility(
-                            visible: error.isNotEmpty,
-                            child: TakiyoError(
-                                error: error, margin: EdgeInsets.only(top: 7))),
-                        Container(
-                          margin: const EdgeInsets.only(top: 9),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Text("Username/Email",
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.0,
-                                          fontWeight: FontWeight.w700),
-                                      textAlign: TextAlign.left),
-                                ],
-                              ),
-                              TextField(
-                                controller: _emailController,
-                                decoration: const InputDecoration(
-                                  labelText: 'user@resonix.com',
-                                  labelStyle: TextStyle(color: Colors.black38),
-                                  floatingLabelBehavior:
-                                      FloatingLabelBehavior.never,
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 16.0, vertical: 8.0),
-                                  border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(15.0)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Container(
-                          margin: const EdgeInsets.only(top: 12),
-                          child: Column(
-                            children: [
-                              Row(
-                                children: [
-                                  Text("Password",
-                                      style: TextStyle(
-                                          color: Colors.white,
-                                          fontSize: 13.0,
-                                          fontWeight: FontWeight.w700),
-                                      textAlign: TextAlign.left),
-                                ],
-                              ),
-                              TextField(
-                                controller: _passwordController,
-                                decoration: const InputDecoration(
-                                  labelText: 'password',
-                                  labelStyle: TextStyle(color: Colors.black38),
-                                  floatingLabelBehavior:
-                                      FloatingLabelBehavior.never,
-                                  filled: true,
-                                  fillColor: Colors.white,
-                                  contentPadding: EdgeInsets.symmetric(
-                                      horizontal: 16.0, vertical: 8.0),
-                                  border: OutlineInputBorder(
-                                    borderRadius:
-                                        BorderRadius.all(Radius.circular(15.0)),
-                                  ),
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                        Align(
-                          alignment: Alignment.centerRight,
-                          child: Container(
-                            margin: const EdgeInsets.only(top: 8.0),
-                            child: ElevatedButton(
-                              onPressed: () {
-                                Navigator.pushReplacement(
-                                    context,
-                                    MaterialPageRoute(
-                                        builder: (context) =>
-                                            const Register()));
-                              },
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10.0),
-                                ),
-                                backgroundColor:
-                                    Colors.transparent.withAlpha(0),
-                                foregroundColor: Colors.white,
-                              ),
-                              child: const Text('Forgot Password'),
+                              color: Colors.white,
                             ),
                           ),
-                        ),
-                        Row(
-                          mainAxisAlignment: MainAxisAlignment.end,
-                          children: [
+                          const SizedBox(height: 8),
+                          if (error.isNotEmpty)
                             Container(
-                              margin: const EdgeInsets.only(right: 8.0),
-                              child: ElevatedButton(
+                              margin: const EdgeInsets.only(bottom: 8),
+                              child: Text(
+                                error,
+                                style: const TextStyle(
+                                  color: Colors.redAccent,
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
+                            ),
+                          TakiyoInputForm(
+                            controller: _emailController,
+                            label: "Username / Email",
+                            placeholder: "Enter your email",
+                            obscureText: false,
+                          ),
+                          TakiyoInputForm(
+                            controller: _passwordController,
+                            label: "Password",
+                            placeholder: "Enter your password",
+                            obscureText: true,
+                          ),
+                          Align(
+                            alignment: Alignment.centerRight,
+                            child: TextButton(
+                              onPressed: () {
+                                Navigator.pushReplacement(
+                                  context,
+                                  MaterialPageRoute(
+                                      builder: (context) => const Register()),
+                                );
+                              },
+                              style: TextButton.styleFrom(
+                                foregroundColor: Colors.white70,
+                              ),
+                              child: const Text("Forgot Password?"),
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            children: [
+                              ElevatedButton(
                                 onPressed: () {
                                   Navigator.pushReplacement(
-                                      context,
-                                      MaterialPageRoute(
-                                          builder: (context) =>
-                                              const Register()));
+                                    context,
+                                    MaterialPageRoute(
+                                        builder: (context) => const Register()),
+                                  );
                                 },
                                 style: ElevatedButton.styleFrom(
-                                  shape: RoundedRectangleBorder(
-                                    borderRadius: BorderRadius.circular(10.0),
-                                  ),
-                                  backgroundColor:
-                                      Colors.transparent.withAlpha(0),
+                                  backgroundColor: Colors.transparent,
                                   foregroundColor: Colors.white,
                                   side: const BorderSide(
                                       color: Colors.white, width: 1),
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                  ),
                                 ),
-                                child: const Text('Register'),
+                                child: const Text("Register"),
                               ),
-                            ),
-                            ElevatedButton(
-                              onPressed: () => login(),
-                              style: ElevatedButton.styleFrom(
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10.0),
+                              ElevatedButton(
+                                onPressed: () => login(),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: Colors.blueAccent,
+                                  foregroundColor: Colors.white,
+                                  shape: RoundedRectangleBorder(
+                                    borderRadius: BorderRadius.circular(10.0),
+                                  ),
+                                ),
+                                child: const Padding(
+                                  padding: EdgeInsets.symmetric(
+                                      horizontal: 16, vertical: 10),
+                                  child: Text("Login"),
                                 ),
                               ),
-                              child: const Text('Login'),
-                            )
-                          ],
-                        ),
-                      ])),
-                )),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
+            ),
           ),
-        )));
+        ),
+    );
   }
 }

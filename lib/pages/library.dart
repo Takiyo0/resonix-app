@@ -5,11 +5,9 @@ import 'package:flutter/material.dart';
 import 'package:resonix/modals/new_playlist_modal.dart';
 import 'package:resonix/pages/album.dart';
 import 'package:resonix/pages/playlist.dart';
-import 'package:resonix/screens/login.dart';
 import 'package:resonix/services/api_service.dart';
 import 'package:resonix/widgets/custom_image.dart';
 import 'package:resonix/widgets/skeleton_track.dart';
-import 'package:shared_preferences/shared_preferences.dart';
 
 class LibraryPage extends StatefulWidget {
   const LibraryPage({super.key});
@@ -46,29 +44,6 @@ class LibraryPageState extends State<LibraryPage> {
 
   @override
   Widget build(BuildContext context) {
-    Future<void> logout() async {
-      var session = await SharedPreferences.getInstance();
-      await session.remove("token");
-      Navigator.of(context, rootNavigator: true).pushReplacement(
-        PageRouteBuilder(
-          pageBuilder: (context, animation, secondaryAnimation) =>
-              const Login(),
-          transitionsBuilder: (context, animation, secondaryAnimation, child) {
-            var begin = const Offset(-1.0, 0.0);
-            var end = Offset.zero;
-            var curve = Curves.ease;
-            var tween =
-                Tween(begin: begin, end: end).chain(CurveTween(curve: curve));
-            var offsetAnimation = animation.drive(tween);
-            return SlideTransition(
-              position: offsetAnimation,
-              child: child,
-            );
-          },
-        ),
-      );
-    }
-
     return Scaffold(
       backgroundColor: Colors.transparent,
       appBar: AppBar(

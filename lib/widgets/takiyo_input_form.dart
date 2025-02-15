@@ -18,34 +18,38 @@ class TakiyoInputForm extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Container(
-      margin: EdgeInsets.only(top: topMargin),
+    return Padding(
+      padding: EdgeInsets.only(top: topMargin),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
             label,
             style: const TextStyle(
-              color: Colors.white,
-              fontSize: 13.0,
-              fontWeight: FontWeight.w700,
+              color: Colors.white70,
+              fontSize: 14.0,
+              fontWeight: FontWeight.w600,
             ),
-            textAlign: TextAlign.left,
           ),
           const SizedBox(height: 5),
           TextField(
             controller: controller,
             obscureText: obscureText,
+            style: const TextStyle(color: Colors.white),
             decoration: InputDecoration(
-              labelText: placeholder,
-              labelStyle: const TextStyle(color: Colors.black38),
-              floatingLabelBehavior: FloatingLabelBehavior.never,
+              hintText: placeholder,
+              hintStyle: const TextStyle(color: Colors.white54),
               filled: true,
-              fillColor: Colors.white,
+              fillColor: Colors.white.withOpacity(0.1),
               contentPadding:
-                  const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
-              border: const OutlineInputBorder(
-                borderRadius: BorderRadius.all(Radius.circular(15.0)),
+              const EdgeInsets.symmetric(horizontal: 16.0, vertical: 12.0),
+              enabledBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: BorderSide(color: Colors.white.withOpacity(0.3)),
+              ),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(12.0),
+                borderSide: const BorderSide(color: Colors.blueAccent),
               ),
             ),
           ),
