@@ -99,8 +99,19 @@ Want to try Resonix? Here’s how you can set it up:
 ## 📌 **Notes**
 
 🔹 This is a **mid-project**, so development is ongoing! I may continue working on it when I have
-free time.  
-🔹 Contributions & feedback are always welcome—feel free to fork the repo and submit PRs.  
-🔹 Future improvements may include **playlist support, better UI, and many more**.
+free time.
+
+---
+
+## 📜 **License**
+
+This project is licensed under the **MIT License**. See the [LICENSE](LICENSE) file for more details.
+
+---
+
+### **Contributions & Support**
+
+💡 **Contributions** are welcome! Feel free to open issues and submit PRs.  
+🚀 **Star this repo** if you find it useful!
 
 ---
