@@ -10,6 +10,7 @@ export 'package:provider/provider.dart';
 export 'package:resonix/state/audio_state.dart';
 
 Future<void> main() async {
+  WidgetsFlutterBinding.ensureInitialized();
   await JustAudioBackground.init(
     androidNotificationChannelId: 'com.takiyo.resonix.channel.audio',
     androidNotificationChannelName: 'Audio playback',
