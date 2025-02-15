@@ -7,6 +7,7 @@ import 'package:resonix/pages/home.dart';
 import 'package:resonix/pages/library.dart';
 import 'package:resonix/pages/now_playing.dart';
 import 'package:resonix/pages/search.dart';
+import 'package:resonix/pages/user.dart';
 import 'package:resonix/services/api_service.dart';
 import 'package:resonix/widgets/custom_image.dart';
 
@@ -49,6 +50,8 @@ class HomeState extends State<Home> {
         return const SearchPage();
       case 2:
         return LibraryPage();
+      case 3:
+        return UserPage(id: null);
       default:
         return const HomePage();
     }
@@ -289,7 +292,11 @@ class HomeState extends State<Home> {
                                                           snapshot.data ??
                                                               false;
                                                       return IconButton(
-                                                        onPressed: track == null || currentProcessingState != ProcessingState.ready
+                                                        onPressed: track ==
+                                                                    null ||
+                                                                currentProcessingState !=
+                                                                    ProcessingState
+                                                                        .ready
                                                             ? null
                                                             : () {
                                                                 if (isPlaying) {
@@ -316,7 +323,9 @@ class HomeState extends State<Home> {
                                                                 child: child);
                                                           },
                                                           child: Icon(
-                                                            currentProcessingState == ProcessingState.buffering
+                                                            currentProcessingState ==
+                                                                    ProcessingState
+                                                                        .buffering
                                                                 ? Icons
                                                                     .hourglass_empty
                                                                 : isPlaying
@@ -384,6 +393,7 @@ class HomeState extends State<Home> {
                         GButton(icon: Icons.home, text: 'Home'),
                         GButton(icon: Icons.search, text: 'Search'),
                         GButton(icon: Icons.library_music, text: 'Library'),
+                        GButton(icon: Icons.person, text: 'User'),
                       ],
                     ),
                   ),
