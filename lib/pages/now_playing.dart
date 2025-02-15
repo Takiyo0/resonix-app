@@ -76,6 +76,21 @@ class NowPlayingPageState extends State<NowPlayingPage>
     );
   }
 
+  Future<bool> trackLiked(String id) async {
+    var response = await ApiService.trackLiked(id);
+    if (!mounted) return false;
+    if (response != null) {
+      if (response["error"] != null) {
+        ApiService.returnError(context, response["error"]);
+        return false;
+      }
+      return response["liked"] == true;
+    } else {
+      await ApiService.returnTokenExpired(context);
+      return false;
+    }
+  }
+
   void setPage(int page) {
     if (page != 0 && _currentPage.value == page) {
       _currentPage.value = 0;
@@ -90,7 +105,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
     _queueController.animateTo(page == 1 ? 1 : 0);
     _lyricsController.animateTo(page == 2 ? 1 : 0);
   }
-
 
   @override
   Widget build(BuildContext context) {
@@ -590,193 +604,196 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                             ),
                                             // queue page
                                             ValueListenableBuilder(
-                                              valueListenable: _currentPage,
-                                              builder: (ctx, value, child) {
-                                                return AnimatedBuilder(
-                                                  animation: _queueController,
-                                                  builder: (ctx, child) {
-                                                    return Positioned.fill(
-                                                      child: Padding(
-                                                        padding:
-                                                        const EdgeInsets.only(
-                                                            top: 70),
-                                                        child: Column(
-                                                          children: [
-                                                            Expanded(
-                                                              child: Padding(
-                                                                padding:
-                                                                const EdgeInsets
-                                                                    .only(
-                                                                    left: 0),
-                                                                child: Transform
-                                                                    .translate(
-                                                                  offset: Offset(
-                                                                      0,
-                                                                      50 +
-                                                                          5 *
-                                                                              _mainTransform
-                                                                                  .value),
-                                                                  child: Opacity(
-                                                                    opacity: _queueController.value,
+                                                valueListenable: _currentPage,
+                                                builder: (ctx, value, child) {
+                                                  return AnimatedBuilder(
+                                                    animation: _queueController,
+                                                    builder: (ctx, child) {
+                                                      return Positioned.fill(
+                                                        child: Padding(
+                                                          padding:
+                                                              const EdgeInsets
+                                                                  .only(
+                                                                  top: 70),
+                                                          child: Column(
+                                                            children: [
+                                                              Expanded(
+                                                                child: Padding(
+                                                                  padding:
+                                                                      const EdgeInsets
+                                                                          .only(
+                                                                          left:
+                                                                              0),
+                                                                  child: Transform
+                                                                      .translate(
+                                                                    offset: Offset(
+                                                                        0,
+                                                                        50 +
+                                                                            5 * _mainTransform.value),
                                                                     child:
-                                                                    IgnorePointer(
-                                                                      ignoring: _currentPage.value != 1,
+                                                                        Opacity(
+                                                                      opacity:
+                                                                          _queueController
+                                                                              .value,
                                                                       child:
-                                                                      StreamBuilder(
-                                                                        stream: Rx
-                                                                            .combineLatest2(
-                                                                          audioState
-                                                                              .player
-                                                                              .sequenceStateStream,
-                                                                          audioState
-                                                                              .player
-                                                                              .currentIndexStream,
-                                                                              (sequenceState,
-                                                                              currentIndex) =>
-                                                                          {
-                                                                            "sequence":
-                                                                            sequenceState,
-                                                                            "index":
-                                                                            currentIndex,
+                                                                          IgnorePointer(
+                                                                        ignoring:
+                                                                            _currentPage.value !=
+                                                                                1,
+                                                                        child:
+                                                                            StreamBuilder(
+                                                                          stream:
+                                                                              Rx.combineLatest2(
+                                                                            audioState.player.sequenceStateStream,
+                                                                            audioState.player.currentIndexStream,
+                                                                            (sequenceState, currentIndex) =>
+                                                                                {
+                                                                              "sequence": sequenceState,
+                                                                              "index": currentIndex,
+                                                                            },
+                                                                          ),
+                                                                          builder:
+                                                                              (context, snapshot) {
+                                                                            if (!snapshot.hasData) {
+                                                                              return Container();
+                                                                            }
+
+                                                                            final sequenceState =
+                                                                                snapshot.data!["sequence"] as SequenceState?;
+                                                                            final currentIndex =
+                                                                                snapshot.data!["index"] as int?;
+
+                                                                            final playlist =
+                                                                                sequenceState?.effectiveSequence ?? [];
+                                                                            if (playlist.isEmpty) {
+                                                                              return Container();
+                                                                            }
+
+                                                                            final previousSongs = currentIndex != null && currentIndex > 0
+                                                                                ? playlist.sublist(0, currentIndex)
+                                                                                : [];
+                                                                            final nextSongs = currentIndex != null && currentIndex + 1 < playlist.length
+                                                                                ? playlist.sublist(currentIndex + 1)
+                                                                                : [];
+
+                                                                            return CustomScrollView(
+                                                                              shrinkWrap: true,
+                                                                              physics: const BouncingScrollPhysics(),
+                                                                              slivers: [
+                                                                                if (previousSongs.isNotEmpty) ...[
+                                                                                  const SliverPadding(
+                                                                                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                                                    sliver: SliverToBoxAdapter(
+                                                                                      child: Text(
+                                                                                        "Previous Songs",
+                                                                                        style: TextStyle(
+                                                                                          fontSize: 18,
+                                                                                          fontWeight: FontWeight.bold,
+                                                                                          color: CupertinoColors.systemGrey,
+                                                                                        ),
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                  SliverList(
+                                                                                    delegate: SliverChildBuilderDelegate(
+                                                                                      (context, index) {
+                                                                                        final item = previousSongs[index].tag as MediaItem?;
+                                                                                        return FadeTransition(
+                                                                                          opacity: AlwaysStoppedAnimation(0.7),
+                                                                                          child: buildListTile(item, index),
+                                                                                        );
+                                                                                      },
+                                                                                      childCount: previousSongs.length,
+                                                                                    ),
+                                                                                  ),
+                                                                                ],
+                                                                                if (nextSongs.isNotEmpty) ...[
+                                                                                  const SliverPadding(
+                                                                                    padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                                                                                    sliver: SliverToBoxAdapter(
+                                                                                      child: Text(
+                                                                                        "Next Songs",
+                                                                                        style: TextStyle(
+                                                                                          fontSize: 18,
+                                                                                          fontWeight: FontWeight.bold,
+                                                                                          color: CupertinoColors.white,
+                                                                                        ),
+                                                                                      ),
+                                                                                    ),
+                                                                                  ),
+                                                                                  SliverList(
+                                                                                    delegate: SliverChildBuilderDelegate(
+                                                                                      (context, index) {
+                                                                                        final item = nextSongs[index].tag as MediaItem?;
+                                                                                        return SlideTransition(
+                                                                                          position: AlwaysStoppedAnimation(Offset.zero),
+                                                                                          child: buildListTile(item, index + previousSongs.length + 1),
+                                                                                        );
+                                                                                      },
+                                                                                      childCount: nextSongs.length,
+                                                                                    ),
+                                                                                  ),
+                                                                                ],
+                                                                              ],
+                                                                            );
                                                                           },
                                                                         ),
-                                                                        builder:
-                                                                            (context,
-                                                                            snapshot) {
-                                                                          if (!snapshot
-                                                                              .hasData) {
-                                                                            return Container();
-                                                                          }
-
-                                                                          final sequenceState =
-                                                                          snapshot.data!["sequence"]
-                                                                          as SequenceState?;
-                                                                          final currentIndex =
-                                                                          snapshot.data!["index"]
-                                                                          as int?;
-
-                                                                          final playlist =
-                                                                              sequenceState?.effectiveSequence ??
-                                                                                  [];
-                                                                          if (playlist
-                                                                              .isEmpty) {
-                                                                            return Container();
-                                                                          }
-
-                                                                          final previousSongs = currentIndex != null &&
-                                                                              currentIndex >
-                                                                                  0
-                                                                              ? playlist.sublist(
-                                                                              0,
-                                                                              currentIndex)
-                                                                              : [];
-                                                                          final nextSongs = currentIndex != null &&
-                                                                              currentIndex + 1 < playlist.length
-                                                                              ? playlist.sublist(currentIndex + 1)
-                                                                              : [];
-
-                                                                          return CustomScrollView(
-                                                                            shrinkWrap:
-                                                                            true,
-                                                                            physics:
-                                                                            const BouncingScrollPhysics(),
-                                                                            slivers: [
-                                                                              if (previousSongs
-                                                                                  .isNotEmpty) ...[
-                                                                                const SliverPadding(
-                                                                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                                                  sliver: SliverToBoxAdapter(
-                                                                                    child: Text(
-                                                                                      "Previous Songs",
-                                                                                      style: TextStyle(
-                                                                                        fontSize: 18,
-                                                                                        fontWeight: FontWeight.bold,
-                                                                                        color: CupertinoColors.systemGrey,
-                                                                                      ),
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                                SliverList(
-                                                                                  delegate: SliverChildBuilderDelegate(
-                                                                                        (context, index) {
-                                                                                      final item = previousSongs[index].tag as MediaItem?;
-                                                                                      return FadeTransition(
-                                                                                        opacity: AlwaysStoppedAnimation(0.7),
-                                                                                        child: buildListTile(item, index),
-                                                                                      );
-                                                                                    },
-                                                                                    childCount: previousSongs.length,
-                                                                                  ),
-                                                                                ),
-                                                                              ],
-                                                                              if (nextSongs
-                                                                                  .isNotEmpty) ...[
-                                                                                const SliverPadding(
-                                                                                  padding: EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-                                                                                  sliver: SliverToBoxAdapter(
-                                                                                    child: Text(
-                                                                                      "Next Songs",
-                                                                                      style: TextStyle(
-                                                                                        fontSize: 18,
-                                                                                        fontWeight: FontWeight.bold,
-                                                                                        color: CupertinoColors.white,
-                                                                                      ),
-                                                                                    ),
-                                                                                  ),
-                                                                                ),
-                                                                                SliverList(
-                                                                                  delegate: SliverChildBuilderDelegate(
-                                                                                        (context, index) {
-                                                                                      final item = nextSongs[index].tag as MediaItem?;
-                                                                                      return SlideTransition(
-                                                                                        position: AlwaysStoppedAnimation(Offset.zero),
-                                                                                        child: buildListTile(item, index + previousSongs.length + 1),
-                                                                                      );
-                                                                                    },
-                                                                                    childCount: nextSongs.length,
-                                                                                  ),
-                                                                                ),
-                                                                              ],
-                                                                            ],
-                                                                          );
-                                                                        },
                                                                       ),
                                                                     ),
                                                                   ),
                                                                 ),
                                                               ),
-                                                            ),
-                                                          ],
+                                                            ],
+                                                          ),
                                                         ),
-                                                      ),
-                                                    );
-                                                  },
-                                                );
-                                              }
-                                            ),
+                                                      );
+                                                    },
+                                                  );
+                                                }),
                                             // lyrics
                                             AnimatedBuilder(
                                               animation: _lyricsController,
                                               builder: (ctx, child) {
                                                 return Positioned.fill(
                                                   child: Padding(
-                                                    padding: const EdgeInsets.only(top: 70),
+                                                    padding:
+                                                        const EdgeInsets.only(
+                                                            top: 70),
                                                     child: Column(
                                                       children: [
                                                         Expanded(
                                                           child: Padding(
-                                                            padding: const EdgeInsets.only(left: 0),
-                                                            child: Transform.translate(
-                                                              offset: Offset(0, 50 + 5 * _mainTransform.value),
+                                                            padding:
+                                                                const EdgeInsets
+                                                                    .only(
+                                                                    left: 0),
+                                                            child: Transform
+                                                                .translate(
+                                                              offset: Offset(
+                                                                  0,
+                                                                  50 +
+                                                                      5 *
+                                                                          _mainTransform
+                                                                              .value),
                                                               child: Center(
                                                                 child: Opacity(
-                                                                  opacity: _lyricsController.value, // Fade in effect
+                                                                  opacity:
+                                                                      _lyricsController
+                                                                          .value,
+                                                                  // Fade in effect
                                                                   child: Text(
                                                                     "Lyrics feature not ready",
-                                                                    style: TextStyle(
-                                                                      fontSize: 20,
-                                                                      fontWeight: FontWeight.bold,
-                                                                      color: Colors.white.withOpacity(0.8),
+                                                                    style:
+                                                                        TextStyle(
+                                                                      fontSize:
+                                                                          20,
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .bold,
+                                                                      color: Colors
+                                                                          .white
+                                                                          .withOpacity(
+                                                                              0.8),
                                                                     ),
                                                                   ),
                                                                 ),
