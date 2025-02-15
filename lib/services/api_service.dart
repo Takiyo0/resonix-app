@@ -585,6 +585,38 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>?> getArtistTopAlbums(String id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
+    try {
+      var response = await _dio.get(
+        "/artist/$id/albums/top",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      if (e.response?.statusCode == 401) return null;
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      print(e);
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
   static Future<Map<String, dynamic>?> getArtistTopTracks(String id) async {
     SharedPreferences prefs = await SharedPreferences.getInstance();
     var token = prefs.getString("token");
@@ -681,6 +713,156 @@ class ApiService {
     }
   }
 
+  static Future<Map<String, dynamic>?> getPublicUser(String id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
+    try {
+      var response = await _dio.get(
+        "/user/$id",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getUserPlaylist(String id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
+    try {
+      var response = await _dio.get(
+        "/user/$id/playlist",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getFollowing(String id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
+    try {
+      var response = await _dio.get(
+        "/user/$id/following",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> getFollowers(String id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
+    try {
+      var response = await _dio.get(
+        "/user/$id/followers",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
+  static Future<Map<String, dynamic>?> followUser(String id) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    var token = prefs.getString("token");
+
+    try {
+      var response = await _dio.post(
+        "/activity/user/$id/follow",
+        options: Options(headers: {"Authorization": "Bearer $token"}),
+      );
+
+      if (response.statusCode == 200) {
+        return response.data;
+      } else {
+        return {
+          "error": response.data['message'] ??
+              response.data['error'] ??
+              "Error ${response.statusCode}"
+        };
+      }
+    } on DioException catch (e) {
+      return {
+        "error": e.response?.data['message'] ??
+            e.response?.data['error'] ??
+            "Error ${e.response?.statusCode}"
+      };
+    } catch (e) {
+      return {"error": "Unknown error occurred"};
+    }
+  }
+
   static Future<bool> isTokenValid(String token) async {
     try {
       var response = await _dio.get('/user',
@@ -694,6 +876,14 @@ class ApiService {
     } catch (e) {
       return false;
     }
+  }
+
+  static Future<void> logout(BuildContext context) async {
+    SharedPreferences prefs = await SharedPreferences.getInstance();
+    if (!context.mounted) return;
+    prefs.remove("token");
+    Navigator.of(context, rootNavigator: true).pushReplacement(
+        MaterialPageRoute(builder: (context) => const Login()));
   }
 
   static Future<dynamic> getUser() async {
