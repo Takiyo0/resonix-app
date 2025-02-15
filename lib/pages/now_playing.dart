@@ -7,6 +7,7 @@ import 'package:resonix/services/api_service.dart';
 import 'package:resonix/widgets/animated_next_button_widget.dart';
 import 'package:resonix/widgets/animated_prev_button_widget.dart';
 import 'package:resonix/widgets/conditional_marquee.dart';
+import 'package:resonix/widgets/now_playing_like.dart';
 import 'package:rxdart/rxdart.dart';
 import 'package:shimmer/shimmer.dart';
 
@@ -74,21 +75,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
         curve: Curves.easeInOutSine,
       ),
     );
-  }
-
-  Future<bool> trackLiked(String id) async {
-    var response = await ApiService.trackLiked(id);
-    if (!mounted) return false;
-    if (response != null) {
-      if (response["error"] != null) {
-        ApiService.returnError(context, response["error"]);
-        return false;
-      }
-      return response["liked"] == true;
-    } else {
-      await ApiService.returnTokenExpired(context);
-      return false;
-    }
   }
 
   void setPage(int page) {
@@ -260,7 +246,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                         widthFactor: .96,
                                         child: Stack(
                                           children: [
-                                            // main cover
                                             AnimatedBuilder(
                                               animation: _globalController,
                                               builder: (ctx, child) {
@@ -401,7 +386,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                 );
                                               },
                                             ),
-                                            // top now playing
                                             Padding(
                                               padding: const EdgeInsets.only(
                                                   bottom: 5,
@@ -429,7 +413,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                             const SizedBox(
                                                                 width: 65,
                                                                 height: 55),
-                                                            // content
                                                             Expanded(
                                                               child: Opacity(
                                                                 opacity: 1 -
@@ -475,37 +458,31 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                                 ),
                                                               ),
                                                             ),
-                                                            // like button
                                                             Opacity(
                                                               opacity: 1 -
                                                                   _mainOpacity
                                                                       .value,
                                                               child:
-                                                                  CupertinoButton(
-                                                                padding:
-                                                                    EdgeInsets
-                                                                        .zero,
-                                                                onPressed:
-                                                                    nowPlaying ==
-                                                                            null
-                                                                        ? null
-                                                                        : () {
-                                                                            setState(() =>
-                                                                                isLiked = !isLiked);
-                                                                          },
-                                                                child: Icon(
-                                                                  isLiked
-                                                                      ? CupertinoIcons
-                                                                          .heart_fill
-                                                                      : CupertinoIcons
-                                                                          .heart,
-                                                                  size: 30,
-                                                                  color: isLiked
-                                                                      ? Colors
-                                                                          .red
-                                                                      : Colors
-                                                                          .white,
-                                                                ),
+                                                                  StreamBuilder(
+                                                                stream: audioState
+                                                                    .player
+                                                                    .sequenceStateStream,
+                                                                builder: (ctx,
+                                                                    snapshot) {
+                                                                  var nowPlaying = snapshot
+                                                                          .data
+                                                                          ?.currentSource
+                                                                          ?.tag
+                                                                      as MediaItem?;
+
+                                                                  return NowPlayingLike(
+                                                                      key: ValueKey(
+                                                                          nowPlaying
+                                                                              ?.id),
+                                                                      trackId:
+                                                                          nowPlaying
+                                                                              ?.id);
+                                                                },
                                                               ),
                                                             ),
                                                           ],
@@ -516,7 +493,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                 ],
                                               ),
                                             ),
-                                            // bottom now playing
                                             AnimatedBuilder(
                                               animation: _globalController,
                                               builder: (ctx, widget) {
@@ -568,33 +544,26 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                                 ],
                                                               ),
                                                             ),
-                                                            CupertinoButton(
-                                                              padding:
-                                                                  EdgeInsets
-                                                                      .zero,
-                                                              onPressed: nowPlaying ==
-                                                                          null ||
-                                                                      _globalController
-                                                                              .value >
-                                                                          0
-                                                                  ? null
-                                                                  : () {
-                                                                      setState(() =>
-                                                                          isLiked =
-                                                                              !isLiked);
-                                                                    },
-                                                              child: Icon(
-                                                                isLiked
-                                                                    ? CupertinoIcons
-                                                                        .heart_fill
-                                                                    : CupertinoIcons
-                                                                        .heart,
-                                                                size: 30,
-                                                                color: isLiked
-                                                                    ? Colors.red
-                                                                    : Colors
-                                                                        .white,
-                                                              ),
+                                                            StreamBuilder(
+                                                              stream: audioState
+                                                                  .player
+                                                                  .sequenceStateStream,
+                                                              builder: (ctx,
+                                                                  snapshot) {
+                                                                var nowPlaying = snapshot
+                                                                        .data
+                                                                        ?.currentSource
+                                                                        ?.tag
+                                                                    as MediaItem?;
+
+                                                                return NowPlayingLike(
+                                                                    key: ValueKey(
+                                                                        nowPlaying
+                                                                            ?.id),
+                                                                    trackId:
+                                                                        nowPlaying
+                                                                            ?.id);
+                                                              },
                                                             ),
                                                           ],
                                                         ),
@@ -602,7 +571,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                     ));
                                               },
                                             ),
-                                            // queue page
                                             ValueListenableBuilder(
                                                 valueListenable: _currentPage,
                                                 builder: (ctx, value, child) {
@@ -750,7 +718,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                     },
                                                   );
                                                 }),
-                                            // lyrics
                                             AnimatedBuilder(
                                               animation: _lyricsController,
                                               builder: (ctx, child) {
@@ -780,7 +747,6 @@ class NowPlayingPageState extends State<NowPlayingPage>
                                                                   opacity:
                                                                       _lyricsController
                                                                           .value,
-                                                                  // Fade in effect
                                                                   child: Text(
                                                                     "Lyrics feature not ready",
                                                                     style:
