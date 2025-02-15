@@ -113,7 +113,7 @@ class PlaylistPageState extends State<PlaylistPage> {
         NetworkImage(
             '${ApiService.baseUrl}/storage/cover/playlist/${data["id"]}'),
       );
-
+      if (!mounted) return;
       setState(() {
         lightColor = _darkenColor(
             palette.lightMutedColor?.color ?? const Color(0xFF1A0E2E), 0.35);
