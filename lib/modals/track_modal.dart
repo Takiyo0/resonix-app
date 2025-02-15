@@ -1,7 +1,7 @@
 import 'package:flutter/cupertino.dart';
 import 'package:resonix/modals/playlists_modal.dart';
 import 'package:resonix/pages/album.dart';
-import 'package:resonix/pages/user.dart';
+import 'package:resonix/pages/artist.dart';
 import 'package:resonix/services/api_service.dart';
 import 'package:resonix/state/audio_state.dart';
 import 'package:resonix/widgets/custom_image.dart';
@@ -205,7 +205,7 @@ class TrackModal {
                                 if (!currentContext.mounted) return;
                                 Navigator.of(currentContext).push(
                                   CupertinoPageRoute(
-                                    builder: (ctx) => UserPage(
+                                    builder: (ctx) => ArtistPage(
                                       id: track["artistids"]?[index],
                                     ),
                                   ),
