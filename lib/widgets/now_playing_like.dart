@@ -17,14 +17,11 @@ class NowPlayingLikeState extends State<NowPlayingLike> {
   @override
   void initState() {
     super.initState();
-    print("init bruh");
     _fetchLikeStatus();
   }
 
   Future<void> _fetchLikeStatus() async {
-    print("isLiked: $isLiked");
     if (widget.trackId == null) return;
-    print("hmm");
     var response = await ApiService.trackLiked(widget.trackId!);
     if (!mounted) return;
     if (response != null) {
